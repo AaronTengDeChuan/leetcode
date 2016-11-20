@@ -1,0 +1,1285 @@
+在这篇文章中，我将会总结 Leetcode OJ 上与二叉树相关的题目的解法。
+
+第一部分：二叉树的遍历
+*二叉树的递归遍历不是本文的重点
+*非递归的遍历二叉树，对于初学者来说是一个挑战，之所以把这些题目的解题过程整理出来，也是因为我是一个初学者。
+*二叉树的三种常规遍历：
+	先根序遍历（Preorder Traversal），也叫先序遍历
+	中根序遍历（Inorder Traversal），中序遍历
+	后根序遍历（Postorder Traversal），后序遍历
+*三种常规遍历的非递归写法，在本文中会陆续出现，请不要着急
+*非递归遍历有 O（n） 空间复杂度的解法，也有 O（1） 空间复杂度的解法，O（1）空间复杂度又是一种挑战。
+*O（n）空间复杂度的解法， 通常需要用到辅助数据结构（栈，队列，等等）
+*而O（1）空间复杂度的解法，通常利用二叉树本身的结构， Congratulations to You ！！！这种解法有一个 让大家熟悉的名字：线索二叉树法！！！
+
+
+开始水题之旅
+
+145.Binary Tree Postorder Traversal（后序遍历）
+  Given a binary tree, return the postorder traversal of its nodes' values.
+
+For example:
+Given binary tree {1,#,2,3},
+
+   1
+    \
+     2
+    /
+   3
+
+return [3,2,1].
+
+Note: Recursive solution is trivial, could you do it iteratively?
+
+【思路】
+    实现非递归的后续遍历的辅助数据结构也是 栈（stack）；但是相比于前序遍历，后续遍历思维上难度要大些，前序遍历是通过一个stack，首先压入父亲结点，然后弹出父亲结点，并输出它的value，之后压人其右儿子，左儿子即可。然而后序遍历结点的访问顺序是：左儿子 -> 右儿子 -> 自己。那么一个结点需要两种情况下才能够输出：第一，它已经是叶子结点；第二，它不是叶子结点，但是它的儿子已经输出过。
+    基于上面的分析，我们需要记录 最近输出的节点：
+	如果从栈中弹出的节点不满足输出条件（不是叶子节点，儿子节点也没有都输出），那么把右儿子和左儿子压入栈中；
+	如果弹出的节点是叶子节点，输出它的 value，成为最近输出的节点；
+	如果弹出的节点的左右儿子都已经输出，输出它的 value，成为最近输出的节点。
+		关键在于怎么判断节点的左右儿子都已经输出--
+			我们知道在后序遍历中，父亲节点的前一个节点要么是它的左儿子，要么是它的右儿子（如果前一个节点是它的左儿子说明，它的右儿子为空）。
+			我们已经记录了最近输出的节点，如果栈中弹出的节点的左儿子或右儿子是最近输出的节点，说明它的左右儿子都已经输出，那么弹出的节点可以输出。
+
+【Python代码】
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+class Solution(object):
+    def postorderTraversal(self, root):
+        result = []
+        if root == None:
+            return result
+        stack = [root]
+        head = root
+        while stack:
+            cur = stack[-1]
+            if cur.left == head or cur.right == head or cur.left == None and cur.right == None:
+                stack.pop()
+                result.append(cur.val)
+                head = cur
+            else:
+                if cur.right:
+                    stack.append(cur.right)
+                if cur.left:
+                    stack.append(cur.left)
+        return result
+
+94. Binary Tree Inorder Traversal（中序遍历）
+  Given a binary tree, return the inorder traversal of its nodes' values.
+
+For example:
+Given binary tree [1,null,2,3],
+
+   1
+    \
+     2
+    /
+   3
+
+return [1,3,2].
+
+Note: Recursive solution is trivial, could you do it iteratively?
+
+非递归解法：
+**O（n）空间复杂度
+  利用辅助数据结构栈，
+def inorderTraversal_n_space(self, root):
+        """
+        :type root: TreeNode
+        :rtype: List[int]
+        """
+        result = []
+        p = root
+        stack = []
+        while len(stack) > 0 or p != None:
+            while p != None:
+                stack.append(p)
+                p = p.left
+            p = stack.pop()
+            result.append(p.val)
+            p = p.right
+        return result
+
+
+**O（1）空间复杂度
+  线索二叉树法，在遍历的过程中，构造线索二叉树（因为每一个节点之中没有 多余的标记，所以是伪线索二叉树：不能直接使用该线索二叉树进行遍历，需要添加控制代码）
+	遍历之后，你可以选择留下线索二叉树结构，也可以选择保留原二叉树的结构，区别只在于 在遍历的过程中，发现线索二叉树后继指针时 将不将其抹去
+	在代码中，两种选择的区别只体现在一行代码 pre.right = None 的有无（有：保留原二叉树，无：保留线索二叉树结构）
+def inorderTraversal(self, root):
+        result = []
+        cur = root
+        pre = None
+        while cur != None:
+            if cur.left == None:
+                result.append(cur.val)
+                cur = cur.right
+            else:
+                pre = cur.left
+                while pre.right != None and pre.right != cur:
+                    pre = pre.right
+                if pre.right == None:
+                    pre.right = cur
+                    cur = cur.left
+                else:
+		    pre.right = None
+                    result.append(cur.val)
+                    cur= cur.right
+        return result
+
+
+
+
+101.Symmetric Tree
+  Given a binary tree, check whether it is a mirror of itself (ie, symmetric around its center).
+
+For example, this binary tree [1,2,2,3,4,4,3] is symmetric:
+
+    1
+   / \
+  2   2
+ / \ / \
+3  4 4  3
+
+But the following [1,2,2,null,3,null,3] is not:
+
+    1
+   / \
+  2   2
+   \   \
+   3    3
+
+Note:
+Bonus points if you could solve it both recursively and iteratively. 
+
+分析：
+     判断一棵二叉树是否是 对称/镜像 二叉树，比较一个树是不是对称树比较难写递归，而比较两个树是否对称树的递归较好写
+	1）根节点的左右子树对称：根节点的左子树 与 右子树对称
+	2）根节点的左子树 root1 ，根结点的右子树 root2： root1的左子树 与 root2的右子树对称；root1的右子树 与 root2的左子树对称
+	3）root1的左子树root11，root2的右子树root22 以及 root1的右子树root12，root2的左子树root12 满足性质2，递归下去
+思路：
+     要求使用递归 和 非递归的解法。
+	递归的解法:
+		判断两个树 root1 和 root2 是否是对称树：
+			都为空树：返回 True
+			一个是空树 或者 根节点不同：返回 False
+			否则，递归判断
+				self.backtracking(root1.left, root2.right)
+				self.backtracking(root1.right, root2.left)
+
+def backtracking(self, root1, root2):
+        if root1 == None and root2 == None:
+            return True
+        elif root1 == None or root2 == None or root1.val != root2.val:
+            return False
+        else:
+            return self.backtracking(root1.left, root2.right) and self.backtracking(root1.right, root2.left):
+
+	非递归的解法，还是比较两棵树 是不是 对称树，对两棵树同步做遍历 root1做先序遍历 ， 而root2做反向先序遍历 
+		流程和递归很相似，借助 栈结构 实现先序遍历
+
+def isSymmetric(self, root):
+        """
+        non-recursive preorder
+        """
+        if root == None:
+            return True
+        stack1 = [root.left]
+        stack2 = [root.right]
+        cur1 = root.left
+        cur2 = root.right
+        if cur1 == None and cur2 == None:
+            return True
+        while len(stack1) >= 1 and len(stack2) >= 1:
+            if cur1 == None and cur2 == None:
+                cur1 = stack1.pop()
+                cur2 = stack2.pop()
+                cur1 = cur1.right
+                cur2 = cur2.left
+            elif cur1 == None or cur2 == None or cur1.val != cur2.val:
+                return False
+            else:
+                stack1.append(cur1)
+                stack2.append(cur2)
+                cur1 = cur1.left
+                cur2 = cur2.right
+        return True
+
+
+
+
+102.Binary Tree Level Order Traversal（层次遍历,up-bottom） 和 107.Binary Tree Level Order Traversal（层次遍历，bottom-up）
+  Given a binary tree, return the level order traversal of its nodes' values. (ie, from left to right, level by level).
+
+For example:
+Given binary tree [3,9,20,null,null,15,7],
+
+    3
+   / \
+  9  20
+    /  \
+   15   7
+
+return its level order traversal as:
+
+[
+  [3],
+  [9,20],
+  [15,7]
+]
+
+思路：
+     层次遍历没有难点，借助一个 队列结构 即可实现，但是这道题有一个要求，遍历结果要分层输出，所以我们要判断每一层的开始和结束。
+     当然我们在对 队列 操作时使用一些技巧就可以 分层输出 , 而 bottom-up 只需要将得到的结果逆序即可。 
+
+	    tmp = [j for j in queue]	#把队列元素都取出来，这些元素都属与一层
+            queue = []			#队列置空，接下来放进去的元素都是下一层的
+            res = []
+            for i in tmp:
+                res.append(i.val)
+                if i.left != None:
+                    queue.append(i.left)
+                if i.right != None:
+                    queue.append(i.right)
+            result.append([i for i in res ])
+
+思考：递归形式 怎么实现？？？
+
+
+AC的源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+class Solution(object):
+    def levelOrder(self, root):
+        """
+        :type root: TreeNode
+        :rtype: List[List[int]]
+        """
+        result = []
+        if root == None:
+            return result
+        queue = [root]
+        while len(queue) > 0:
+            tmp = [j for j in queue]
+            queue = []
+            res = []
+            for i in tmp:
+                res.append(i.val)
+                if i.left != None:
+                    queue.append(i.left)
+                if i.right != None:
+                    queue.append(i.right)
+            result.append([i for i in res ])
+        return result		# bottom-up 时 return result[::-1]
+
+
+        
+103.Binary Tree Zigzag Level Order Traversal（Z字形层次遍历）
+  Given a binary tree, return the zigzag level order traversal of its nodes' values. (ie, from left to right, then right to left for the next level and alternate between).
+
+For example:
+Given binary tree [3,9,20,null,null,15,7],
+
+    3
+   / \
+  9  20
+    /  \
+   15   7
+
+return its zigzag level order traversal as:
+
+[
+  [3],
+  [20,9],
+  [15,7]
+]
+
+思路：
+     利用 栈结构 先进后出的性质，用一个标志位 flag 记录先进左子树还是右子树，每一层翻转一次。
+
+AC的源代码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+class Solution(object):
+    def zigzagLevelOrder(self, root):
+        """
+        :type root: TreeNode
+        :rtype: List[List[int]]
+        """
+        result = []
+        if root == None:
+            return result
+        stack = [root]
+        flag = True
+        while len(stack) > 0:
+            tmp = [j for j in stack]
+            stack = []
+            res = []
+            while len(tmp) > 0:
+                i = tmp.pop()
+                res.append(i.val)
+                if flag == True:
+                    if i.left != None:
+                        stack.append(i.left)
+                    if i.right != None:
+                        stack.append(i.right)
+                else:
+                    if i.right != None:
+                        stack.append(i.right)
+                    if i.left != None:
+                        stack.append(i.left)
+            result.append([i for i in res ])
+            flag = -flag
+        return result
+        
+
+104. Maximum Depth of Binary Tree（求二叉树的最大深度：最长路径上的节点数）
+	和 111. Minimum Depth of Binary Tree（最小深度：根节点到叶子节点的最少节点数）
+  Given a binary tree, find its maximum depth（minimum depth）.
+The maximum depth is the number of nodes along the longest path from the root node down to the farthest leaf node.
+The minimum depth is the number of nodes along the shortest path from the root node down to the nearest leaf node.
+
+思路：
+最大深度
+     DFS 和 BFS 均可
+	DFS 思想：求出当前节点的 左子树深度 和 右子树深度 ，返回 最大即可
+	BFS 思想：每遍历一层，深度加一，直到最后一层
+最小深度
+     DFS 和 BFS
+	DFS 思想：每一条路径，都要到叶子节点，非叶子节点不能作为路径的终点，所以过程如下：
+		1）如果当前节点 左子树为空树，右子树不为空，返回 1 + 右子树最小深度
+		2）如果当前节点 右子树为空树，左子树不为空，返回 1 + 左子树最小深度
+		3）当前节点 左右子树都为空，返回 1
+		4）都不为空，返回 1 + min(左子树最小深度， 右子树最小深度)
+	BFS 思想：每遍历一层，深度加一，如果发现叶子节点（左右子树均为空树），就找到了最短路径的终点，返回深度即可
+
+
+最大深度
+DFS 代码：
+class Solution(object):
+    def dfs_depth(self, depth, root):
+        if root == None:
+            return depth
+        else:
+            left_depth = self.dfs_depth(depth + 1, root.left)
+            right_depth = self.dfs_depth(depth + 1, root.right)
+            return max(left_depth, right_depth)
+
+    def maxDepth(self, root):
+        """
+        :type root: TreeNode
+        :rtype: int
+        """
+        depth = 0
+        return self.dfs_depth(depth, root)
+
+BFS 代码：
+//采用BFS的方法，引入队列
+int maxDepth(TreeNode *root)
+{
+    if (NULL == root)
+        return 0;
+    queue <TreeNode *> que;
+    int nCount = 1;
+    int nDepth = 0;// 记录队列里面每一层上的元素
+
+    que.push(root);
+    while(!que.empty()) {
+        TreeNode *pTemp = que.front();
+        que.pop();
+        nCount --;
+
+        if (pTemp->left)
+            que.push(pTemp->left);
+        if (pTemp->right)
+            que.push(pTemp->right);
+        
+        if (nCount == 0) {
+            nDepth ++;
+            nCount = que.size();
+        }
+    }
+    return nDepth;
+}
+
+最小深度
+class Solution(object):
+#DFS代码
+    def dfs_depth(self, root):
+        if root == None:
+            return 0
+        else:
+            left_depth = self.dfs_depth(root.left)
+            right_depth = self.dfs_depth(root.right)
+            if left_depth == 0:
+                return 1 + right_depth
+            elif right_depth == 0:
+                return 1 + left_depth
+            else:
+                return 1 + min(left_depth, right_depth)
+#BFS代码
+    def minDepth(self, root):
+        """
+        :type root: TreeNode
+        :rtype: int
+        """
+        #return self.dfs_depth(root)
+        if root == None:
+            return 0
+        min_depth = 1
+        num = 1
+        queue = [root]
+        while len(queue) > 0:
+            tmp = queue[0]
+            del queue[0]
+            num -= 1
+            if tmp.right == None and tmp.left == None:
+                break
+            else:
+                if tmp.left != None:
+                    queue.append(tmp.left)
+                if tmp.right != None:
+                    queue.append(tmp.right)
+            if num == 0:
+                min_depth += 1
+                num = len(queue)
+        return min_depth
+
+
+
+105. Construct Binary Tree from Preorder and Inorder Traversal（根据 先序遍历 和 中序遍历 构建 二叉树） 
+	和 106.Construct Binary Tree from Inorder and Postorder Traversal（根据 中序遍历 和 后序遍历 构建 二叉树）
+  Given preorder and inorder traversal of a tree, construct the binary tree.
+
+Note:
+You may assume that duplicates do not exist in the tree. 
+
+思路：
+     二叉树的首节点必然是前序遍历的第一个节点（前序遍历的最后一个节点），以这个节点在中序遍历的结果中作为划分，这个节点左侧的是左子树的节点，右侧是右子树节点。
+
+例如，一个二叉树的前序遍历结果为：6 5 4 8 7 9
+
+	         中序遍历结果为：4 5 6 7 8 9
+		 
+		 后续遍历结果为：7 9 8 4 5 6
+
+     前序遍历的第一个节点为6，就是这个二叉树的根节点。以6作为划分，中序遍历6以左的节点就是二叉树的左子树，以右的就是二叉树的右节点。按照此逻辑进行递归操作即可AC。
+
+注意：
+     递归过程中，preorder 和 inorder 的 开始位置 以及 长度 容易出错，要仔细
+
+AC的源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+#根据 先序遍历 和 中序遍历 构建 二叉树
+class Solution(object):
+    def dfs_buildTree(self, preorder, inorder, pre_start, in_start, len):
+        if len == 0:
+            return None
+        for i in range(in_start, in_start + len):
+            if preorder[pre_start] == inorder[i]:
+                break
+        root = TreeNode(preorder[pre_start])
+        root.left = self.dfs_buildTree(preorder, inorder, pre_start + 1, in_start, i - in_start)
+        root.right = self.dfs_buildTree(preorder, inorder, pre_start + i - in_start + 1, i + 1, len - i + in_start - 1)
+        return root
+
+    def buildTree(self, preorder, inorder):
+        """
+        :type preorder: List[int]
+        :type inorder: List[int]
+        :rtype: TreeNode
+        """
+        return self.dfs_buildTree(preorder, inorder, 0, 0, len(preorder))
+  
+#根据 中序遍历 和 后序遍历 构建 二叉树    
+class Solution(object):
+    def dfs_buildTree(self, inorder, postorder, in_start, post_start, len):
+        if len == 0:
+            return None
+        for i in range(in_start, in_start + len):
+            if postorder[post_start + len - 1] == inorder[i]:
+                break
+        root = TreeNode(postorder[post_start + len - 1])
+        root.left = self.dfs_buildTree(inorder, postorder,in_start, post_start, i - in_start)
+        root.right = self.dfs_buildTree(inorder, postorder, i + 1, post_start + i - in_start, len - i + in_start - 1)
+        return root
+
+    def buildTree(self, inorder, postorder):
+        """
+        :type inorder: List[int]
+        :type postorder: List[int]
+        :rtype: TreeNode
+        """
+        return self.dfs_buildTree(inorder, postorder, 0, 0, len(inorder))  
+
+108.Convert Sorted Array to Binary Search Tree
+  Given an array where elements are sorted in ascending order, convert it to a height balanced BST.
+
+思路：
+     把已排序的数组转换成 高度平衡二叉树。
+     给定一个区间[left, right]，取其中值mid=(left+right)/2对应的元素作为二叉树的根。二叉树的左子树根的值为对[left, mid-1]继续操作的结果，右子树类似。
+
+AC的源代码：
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+class Solution(object):
+    def BST(self, nums, left, right):
+        if left > right:
+            return None
+        if left == right:
+            return TreeNode(nums[left])
+        mid = (left + right) / 2
+        root = TreeNode(nums[mid])
+        root.left = self.BST(nums, left, mid - 1)
+        root.right = self.BST(nums, mid + 1, right)
+        return root
+    def sortedArrayToBST(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: TreeNode
+        """
+        return self.BST(nums, 0, len(nums) - 1)
+        
+
+
+109.Convert Sorted List to Binary Search Tree
+  Given a singly linked list where elements are sorted in ascending order, convert it to a height balanced BST. 
+
+思路：
+     与 108 题的不同点是，题目给的是 已排好序的单链表。
+     一种方法，把单链表 遍历一遍生成已排好序的数组，转换成 108题，但是，不推荐这种解法，空间占用太大了，双倍的空间，过大数据集的测试太勉强。
+     另一种方法，直接在链表上操作，边遍历边 从底向上 生成 BST，也是递归实现，不过有些别扭，试着理解。
+	1）先遍历一遍链表，数出 共有多少节点；
+	2）递归的过程中 维护 一个全局变量 head ，在 Python 中，变量 的 形参传递方式 是 赋值，所以想维护 一个全局变量，只能把它放入 列表 这种 形参传递方式是 引用 的数据类型中。
+	3）head[0] 指向 当前的链表节点，遍历之后，head[0] = head[0].next ，指针后移；这样就边遍历边生成 BST。
+	4）head 是 全局的变量，它的存在只是为了 生成 节点（生成了一个节点之后，当然要将 指针 指向链表的下一个节点了），真正的逻辑控制是 由 left 和 right 这两个位置 变量 控制的。
+	5）树节点的生成顺序 就是 中序遍历 的顺序，借助这个应该能更好的理解 BST 的生成过程。
+	6）从本质上来说，这道题的实现思想和 108题 的思想 基本相同，都是 通过 left 和 right 控制逻辑，但是 108 的逻辑更清晰，先生成根节点 root，递归生成 root 的 左子树 和 右子树；而 109 题 因为是链表，没法直接找到 根节点 root ，但是 可以 通过 对全局变量 head 的 改变，在递归生成子树 的过程中 找到 根节点。 
+
+AC的源代码：
+
+class Solution(object):
+    def bottom_to_up_BST(self, head, left, right):
+        if left > right:
+            return None
+        mid = (left + right) / 2
+        left_tree = self.bottom_to_up_BST(head, left, mid - 1)
+        root = TreeNode(head[0].val)
+        root.left = left_tree
+        head[0] = head[0].next
+        root.right = self.bottom_to_up_BST(head, mid + 1,right)
+        return root
+
+    def sortedListToBST(self, head):
+        """
+        :type head: ListNode
+        :rtype: TreeNode
+        """
+        p = head
+        length = 0
+        while p != None:
+            length += 1
+            p = p.next
+        return self.bottom_to_up_BST([head], 0, length - 1)
+
+
+
+110. Balanced Binary Tree
+  Given a binary tree, determine if it is height-balanced.
+
+For this problem, a height-balanced binary tree is defined as a binary tree in which the depth of the two subtrees of every node never differ by more than 1. 
+
+思路：
+     求树的深度 的 变种，解决这个问题需要计算 每个节点的树高，DFS
+	维护一个全局变量 flag （在列表中），如果某个节点的左右子树 高度差 大于 1，将 flag 置为 False
+	if abs(left - right) > 1:
+            flag[0] = False
+	缺点：无论这棵树是否是平衡的二叉树，都需要 DFS 结束之后才知道，即每个节点都要遍历一遍。
+	解决方案：
+		某一层递归中，如果 左子树的不满足条件，无需判断 右子树，直接 返回 -1.
+		如果右子树不满足条件，返回 -1，不用再计算 树高。
+		如果左右子树均满足条件，
+			如果左右子树的树高差大于 1 ，这课子树的树高 为 -1，否则 返回实际的树高
+	优点：同样是计算树的高度，如果在某一个节点上发现 它的左右子树不满足平衡二叉树的条件，这个节点的树高 等于 -1，表示以这个节点为根节点的子树不满足平衡二叉树的条件。
+
+AC的源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+class Solution(object):
+    def height_balanced(self, root, flag):
+        if root == None:
+            return 0
+        left = self.height_balanced(root.left, flag)
+        right = self.height_balanced(root.right, flag)
+        if abs(left - right) > 1:
+            flag[0] = False
+        return 1 + max(left, right)
+
+    def isBalanced(self, root):
+        """
+        :type root: TreeNode
+        :rtype: bool
+        """
+        flag = [True]
+        self.height_balanced(root, flag)
+        if flag[0]:
+            return True
+        else:
+            return False
+
+
+改进之后的源代码：
+class Solution(object):
+    def getHeight(self, root):
+        if root == None:
+            return 0
+        left = self.getHeight(root.left)
+        if left == -1:
+            return -1
+        right = self.getHeight(root.right)
+        if right == -1:
+            return -1
+        if abs(left - right) > 1:
+            return -1
+        else:
+            return 1 + max(left, right)
+        
+    def isBalanced(self, root):
+        """
+        :type root: TreeNode
+        :rtype: bool
+        """
+        if self.getHeight(root) == -1:
+            return False
+        else:
+            return True
+
+
+112. Path Sum
+	和 113. Path Sum II（Find all root-to-leaf paths where each path's sum equals the given sum. ）
+  Given a binary tree and a sum, determine if the tree has a root-to-leaf path such that adding up all the values along the path equals the given sum.
+For example:
+Given the below binary tree and sum = 22,
+
+              5
+             / \
+            4   8
+           /   / \
+          11  13  4
+         /  \      \
+        7    2      1
+
+return true, as there exist a root-to-leaf path 5->4->11->2 which sum is 22.
+
+思路：
+     简单的DFS 先序遍历，需要注意的是：所要求的路径 是 根节点到叶子节点的路径 root.left == None and root.right == None
+	当节点是叶子节点时，才能决定这条路径是否满足条件；节点为空时，返回False
+     Path Sum II 是找到所有的 路径，并打印出来，在 Path Sum 上改写即可（只写了递归形式的，非递归不会写）。
+     以下有 Path Sum 递归版本 和 非递归版本：
+
+AC的源代码：
+递归版本
+    def hasPathSum_recurse(self, root, sum):
+        """
+        :type root: TreeNode
+        :type sum: int
+        :rtype: bool
+        """ 
+        if root == None:
+            return False
+        elif root.left == None and root.right == None and root.val == sum:
+            return True
+        else:
+            return self.hasPathSum(root.left, sum - root.val) or self.hasPathSum(root.right, sum - root.val)
+
+非递归版本
+class Solution(object):
+    def hasPathSum(self, root, sum):
+        if root == None:
+            return False
+        stack = [[root,sum]]
+        cur = root
+        while len(stack) >= 1:
+            while cur != None and cur.left != None:
+                sum -= cur.val
+                stack.append([cur, sum])
+                cur = cur.left
+            if cur != None and cur.right == None and sum == cur.val:
+                return True
+            elif cur == None or cur.right == None:
+                tmp = stack.pop()
+                cur = tmp[0].right
+                sum = tmp[1]
+            else:
+                sum -= cur.val 
+                cur = cur.right
+        return False
+
+Path Sum II 递归代码：
+class Solution(object):
+    def hasPathSum_recurse(self, root, sum, result, value_list):
+        """
+        :type root: TreeNode
+        :type sum: int
+        :rtype: bool
+        """ 
+        if root == None:
+            return
+        elif root.left == None and root.right == None and root.val == sum:
+            result.append([i for i in value_list] + [root.val])
+            return
+        else:
+             self.hasPathSum_recurse(root.left, sum - root.val, result, value_list + [root.val])
+             self.hasPathSum_recurse(root.right, sum - root.val, result, value_list + [root.val])
+
+    def pathSum(self, root, sum):
+        """
+        :type root: TreeNode
+        :type sum: int
+        :rtype: List[List[int]]
+        """
+        result = []
+        self.hasPathSum_recurse(root, sum, result, [])
+        return result
+
+
+
+114. Flatten Binary Tree to Linked List
+  Given a binary tree, flatten it to a linked list in-place.
+
+For example,
+Given
+
+         1
+        / \
+       2   5
+      / \   \
+     3   4   6
+
+The flattened tree should look like:
+
+   1
+    \
+     2
+      \
+       3
+        \
+         4
+          \
+           5
+            \
+             6
+
+click to show hints.
+Hints:
+
+If you notice carefully in the flattened tree, each node's right child points to the next node of a pre-order traversal.
+
+思路：自己写了一个实现代码，利用 栈结构 进行先序遍历，边遍历边改变树的结构。
+	但是在网上看到一个 简单优雅的 算法，看起来好自然，就是没想到。
+Note that the problem requires in-place operation.The flatten procedure is like: cut the left child and set to right, the right child is then linked to somewhere behind the left child. Where should it be then? Actually the right child should be linked to the most-right node of the left node. So the algorithm is as follows:
+(1) store the right child (we call R)
+(2) find the right-most node of left child
+(3) set R as the right-most node's right child.
+(4) set left child as the right child
+(5) set the left child NULL
+(6) set current node to current node's right child.
+(7) iterate these steps until all node are flattened.
+
+This seems simple and elegent.
+
+源代码：
+class Solution(object):
+    def flatten(self, root):
+        while root != None:
+            if root.left != None:
+                pre = root.left
+                while pre.right != None:
+                    pre = pre.right
+                pre.right = root.right
+                root.right = root.left
+                root.left = None
+            root = root.right
+
+自己写的代码：
+class Solution(object):
+    def flatten(self, root):
+        """
+        :type root: TreeNode
+        :rtype: void Do not return anything, modify root in-place instead.
+        """
+        stack = []
+        cur = root
+        end = None
+        while cur != None or len(stack) > 0:
+            while cur != None:
+                stack.append(cur)
+                end = cur
+                cur = cur.left
+            tmp = stack.pop()
+            end.right = tmp.right
+            if tmp.left != None:
+                tmp.right = tmp.left
+                tmp.left = None
+            cur = end.right
+        return root
+
+
+116. Populating Next Right Pointers in Each Node
+	和 117. Populating Next Right Pointers in Each Node II
+  Given a binary tree
+
+    struct TreeLinkNode {
+      TreeLinkNode *left;
+      TreeLinkNode *right;
+      TreeLinkNode *next;
+    }
+
+Populate each next pointer to point to its next right node. If there is no next right node, the next pointer should be set to NULL.
+
+Initially, all next pointers are set to NULL.
+
+Note:
+
+    You may only use constant extra space.
+    The given tree could be any binary tree.
+
+For example,
+Given the following perfect binary tree,
+
+         1
+       /  \
+      2    3
+     / \  / \
+    4  5  6  7
+
+After calling your function, the tree should look like:
+  
+   	 1 -> NULL
+       /  \
+      2 -> 3 -> NULL
+     / \    \
+    4-> 5 -> 7 -> NULL
+
+
+思路：
+     这道题之所以放上来是因为题目中的那句话：You may only use constant extra space
+
+这就意味着，深搜是不能用的，因为递归是需要栈的，因此空间复杂度将是 O(logn)。毫无疑问广搜也不能用，因为队列也是占用空间的，空间占用还高于 O(logn).
+     难就难在这里，深搜和广搜都不能用，怎么完成树的遍历？
+     	核心仍然是广搜，但是我们可以借用 next 指针，做到不需要队列就能完成广度搜索。 
+     	如果当前层所有结点的next 指针已经设置好了，那么据此，下一层所有结点的next指针 也可以依次被设置。
+
+我把 BFS队列实现，DFS递归实现 和 使用常量空间的实现 代码全部贴出来。
+因为 117 题 比 116 题严格，所以 117 题的代码可以不加修改的 直接 AC 116 题，因此 使用常量空间的实现 贴出 117 题的代码即可。
+
+#使用常量空间的实现代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeLinkNode:
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+        self.next = None
+
+class Solution:
+    # @param root, a tree link node
+    # @return nothing
+    def connect(self, root):
+        pre = root
+        cur = None
+        while pre != None:
+            while pre != None and pre.left == None and pre.right == None:
+                pre = pre.next
+            if pre == None:
+                break
+            if pre.left != None:
+                cur = pre.left
+            else:
+                cur = pre.right
+            tmp = TreeLinkNode(0)
+            while pre != None:
+                if pre.left != None:
+                    tmp.next = pre.left
+                    tmp = tmp.next
+                if pre.right != None:
+                    tmp.next = pre.right
+                    tmp = tmp.next
+                pre = pre.next
+            pre = cur
+
+#BFS 队列 代码：
+    def connect_n_space(self, root):
+        if root == None:
+            return
+        queue = [root]
+        while len(queue) > 0:
+            tmp = [i for i in queue]
+            queue = []
+            for i in range(len(tmp)):
+                if tmp[i].left != None:
+                    queue.append(tmp[i].left)
+                if tmp[i].right != None:
+                    queue.append(tmp[i].right)
+                if i == len(tmp) - 1:
+                    tmp[i].next = None
+                else:
+                    tmp[i].next = tmp[i + 1]
+
+#DFS 递归 代码：
+    def dfs_log_n_space(self, root):
+        if root == None or root.left == None and root.right == None:
+            return
+        l = root.left
+        r = root.right
+        while l != None:
+            l.next = r
+            l = l.right
+            r = r.left
+        self.dfs(root.left)
+        self.dfs(root.right)
+
+
+
+
+
+
+第二部分：二叉排序树
+*这一部分包括了与二叉排序树的性质和使用相关 的 题目整理
+
+
+96.Unique Binary Search Trees(由 1...n n个连续整数 构成的二叉排序树 的总数量)
+  Given n, how many structurally unique BST's (binary search trees) that store values 1...n?
+
+For example,
+Given n = 3, there are a total of 5 unique BST's.
+
+   1         3     3      2      1
+    \       /     /      / \      \
+     3     2     1      1   3      2
+    /     /       \                 \
+   2     1         2                 3
+
+思路：
+  二分查找树的定义是，左子树节点均小于root，右子树节点均大于root！不要想当然地将某个点作为root时，认为其他所有节点都能全部放在left/right中，除非这个点是 min 或者 max 的。
+  本题其实关键是递推过程的分析，n个点中每个点都可以作为root，当 i 作为root时，小于 i  的点都只能放在其左子树中，大于 i 的点只能放在右子树中，此时只需求出左、右子树各有多少种，二者相乘即为以 i 作为root时BST的总数。
+  因为递归过程中存在大量的重复计算，从n一层层往下递归，故考虑类似于动态规划的思想，让底层的计算结果能够被重复利用，故用一个数组 dp 存储中间计算结果，这样只需双层循环即可。
+  数组 dp[0]~dp[n]， dp[i] 表示 长度为 len = i 的连续整数构成的二叉排序树的数量
+  递推式：dp[i] = Σ dp[j]*dp[i-j-1] , j = 0 ~ i-1
+
+源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def numTrees(self, n):
+        """
+        :type n: int
+        :rtype: int
+        """
+        if n == 0:
+            return 0
+        dp = []
+        for i in range(n + 1):
+            dp.append(0)
+        dp[0] = 1
+        dp[1] = 1
+        for i in range(2,n + 1):
+            for j in range(i):
+                dp[i] += dp[j] * dp[i - j - 1]
+        return dp[n]
+
+solution = Solution()
+print solution.numTrees(int(raw_input("n = ")))
+
+        
+
+
+95.Unique Binary Search Tree II（生成 由 1...n n个连续整数 构成的所有二叉排序树）
+  Given an integer n, generate all structurally unique BST's (binary search trees) that store values 1...n.
+
+For example,
+Given n = 3, your program should return all 5 unique BST's shown below.
+
+   1         3     3      2      1
+    \       /     /      / \      \
+     3     2     1      1   3      2
+    /     /       \                 \
+   2     1         2                 3
+
+分析：
+     这道题是 96.Unique Binary Search Tree 的进阶，上一题只需求 二叉排序树的 总数量，而这道题 要生成这些二叉树（是个大工程）
+     比较容易想到的方法是 递归回溯 ，这是比较直观也比较好理解的 解法，很自然。
+	但是，如果这道题使用 递归回溯，我为什么要写在这里？ （让我 膨胀吧）
+	我们注意到，使用递归回溯时，会重复处理一些子问题，这就造成了时间上的浪费，何不把子问题都存下来，所以我用动态规划解了这道题，一次AC。
+     使用动态规划处理这个问题，动态数组 比较复杂。
+	数组 result 可以看成三维数组 result[i][j][k]：
+		对于数组的第一维 result[i], 内容是，所有长度为 i 的连续整数的二叉排序树结果集，
+		对于数组的第二维 result[i][j],内容是，长度为i，以 整数j 开头的数组的二叉排序树根节点结果集，也就是连续整数串 j～j + i - 1 的生成二叉排序树问题的结果。
+		对于数组的第三维 result[i][j][k],是长度为 i，以整数 j 开头的数组的某个二叉排序树的根节点。
+	求长度为 i 的连续整数的二叉排序树生成问题时，可以利用之前得到的所有结果，没有了重复生成时间。
+	
+
+源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+class Solution(object):
+    def generateTrees(self, n):
+        """
+        :type n: int
+        :rtype: List[TreeNode]
+        """
+        result = []
+        if n == 0:
+            return result
+        for i in range(n + 1):
+            result.append([None])
+        for i in range(n + 1):
+            result[0].append([None])
+        for i in range(1, n + 1):
+            result[1].append([TreeNode(i)])
+        for i in range(2, n + 1):
+            for j in range(1, n + 2 - i):
+                tmp = []
+                for k in range(j, j + i ):
+                    for l in result[k - j][j]:
+                        for m in result[j + i - 1 - k][k + 1]:
+                            root = TreeNode(k)
+                            root.left = l
+                            root.right = m
+                            tmp.append(root)
+                result[i].append([item for item in tmp])
+        return result[n][1]
+        
+solution = Solution()
+result = solution.generateTrees(int(raw_input("n = ")))
+print len(result)
+
+
+
+98.Validate Binary Search Tree（判断二叉树是否是合法的二叉排序树）
+  Given a binary tree, determine if it is a valid binary search tree (BST).
+
+Assume a BST is defined as follows:
+
+    The left subtree of a node contains only nodes with keys less than the node's key.
+    The right subtree of a node contains only nodes with keys greater than the node's key.
+    Both the left and right subtrees must also be binary search trees.
+
+Example 1:
+
+    2
+   / \
+  1   3
+
+Binary tree [2,1,3], return true.
+
+Example 2:
+
+    1
+   / \
+  2   3
+
+Binary tree [1,2,3], return false. 
+
+分析：
+     何为二分查找树？
+	1) 左子树的值都比根节点小；
+	2) 右子树的值都比根节点大；
+	3) 左右子树也必须满足上面两个条件。
+     需要注意的是，左子树的所有节点都要比根节点小，而非只是其左孩子比其小，右子树同样。这是很容易出错的一点是，很多人往往只考虑了每个根节点比其左孩子大比其右孩子小。如下面非二分查找树，如果只比较节点和其左右孩子的关系大小，它是满足的。
+
+     5
+  /     \
+4      10
+      /      \
+    3        11
+
+思路：
+     一种方法：中序遍历二叉树，二叉排序树的性质是 中序遍历的结果 是递增序列，只需 用 pre 记录 上一次访问的节点。
+	中序遍历到某一个节点 cur 时，若 cur.val <= pre.val，违反了二叉排序树的性质，无效的 二叉排序树。
+
+非递归实现的源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+class Solution(object):
+    def isValidBST(self, root):
+        """
+        :type root: TreeNode
+        :rtype: bool
+        """
+        cur_max = None
+        pre = None
+        while root != None:
+            if root.left == None:
+                if cur_max != None and cur_max.val >= root.val:
+                    return False
+                cur_max = root
+                root = root.right
+            else:
+                pre = root.left
+                while pre.right != None and pre.right != root:
+                    pre = pre.right
+                if pre.right == None:
+                    pre.right = root
+                    root = root.left
+                else:
+                    if cur_max.val >= root.val:
+                        return False
+                    cur_max = root
+                    pre.right = None
+                    root = root.right
+        return True
+
+     
+
+99. Recover Binary Search Tree（恢复二叉排序数）
+  Two elements of a binary search tree (BST) are swapped by mistake.
+
+Recover the tree without changing its structure.
+Note:
+A solution using O(n) space is pretty straight forward. Could you devise a constant space solution? 
+
+分析：
+     一个二叉排序树的两个元素被交换了，成为错误的二叉排序树，要求在不改变已有的二叉树结构的前提下将其 恢复 到合法状态。
+题目的限制：
+     1）不改变二叉树的结构
+     2）使用常量的空间O（1）
+思路：
+     对于第一个限制，这个限制就是在限制我们的解法，如果没有这个限制，我们可以通过调整树的结构来满足二叉排序树的条件。
+     对于第二个限制，
+	很不幸，不能使用递归来遍历二叉树了，因为递归需要占用空间；
+	还有，不能中序遍历二叉树生成序列，然后对序列中排序错误的进行调整，最后再进行一次赋值操作
+     有了这两个限制之后，算法已经有了雏形
+	非递归中序遍历，找到出错的两个位置，交换之
+	设置一个pre指针，记录当前节点中序遍历时的前节点，如果当前节点 <= pre节点的值，说明找到了一个错误的位置 —— pre所在的位置。
+	如果遍历整个序列过程中只出现了一次次序错误，说明就是这两个相邻节点需要被交换。如果出现了两次次序错误，那就需要交换这两个节点。
+
+符合条件的Python源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+class Solution(object):
+    def recoverTree(self, root):
+        """
+        :type root: TreeNode
+        :rtype: void Do not return anything, modify root in-place instead.
+        """
+        firstMistake = None
+        secondMistake = None
+        cur_max = None
+        pre = None
+        while root != None:
+            if root.left == None:
+                if cur_max != None and cur_max.val >= root.val:
+                    if firstMistake == None:
+                        firstMistake = cur_max
+                        secondMistake = root
+                    else:
+                        secondMistake = root
+                cur_max = root
+                root = root.right
+            else:
+                pre = root.left
+                while pre.right != None and pre.right != root:
+                    pre = pre.right
+                if pre.right == None:
+                    pre.right = root
+                    root = root.left
+                else:
+                    if cur_max.val >= root.val:
+                        if firstMistake == None:
+                            firstMistake = cur_max
+                            secondMistake = root
+                        else:
+                            secondMistake = root
+                    cur_max = root
+                    pre.right = None
+                    root = root.right
+        firstMistake.val, secondMistake.val = secondMistake.val, firstMistake.val
+        
+   
+

@@ -1,0 +1,150 @@
+位操作（Bit Manipulation）
+题目：
+	136.Single Number（XOR）
+	137.Single Number II
+	260.Single Number III（XOR）
+
+136.Single Number 
+  Given an array of integers, every element appears twice except for one. Find that single one.
+
+Note:
+Your algorithm should have a linear runtime complexity. Could you implement it without using extra memory? 
+
+【思路】
+使用位操作----异或，异或的性质：满足交换律和结合律
+    谈谈对异或的理解：
+	我们看这样一串二进制位：1 0 1 1 0 0 1 1 ，它们的异或式 1 xor 0 xor 1 xor 1 xor 0 xor 0 xor 1 xor 1 = 1
+	再看另一串二进制位：    1 0 1 0 0 0 1 1 ，它们的异或式 1 xor 0 xor 1 xor 0 xor 0 xor 0 xor 1 xor 1 = 0
+	再看一个：	       1 0 1 0 0 0 1 0 ，它们的异或式 1 xor 0 xor 1 xor 0 xor 0 xor 0 xor 1 xor 0 = 1
+    对上面三个串，从左到右的进行异或运算，有一种感觉，
+	二进制位 0 对于运算结果好像没有贡献，换句话说：
+		如果前面的计算结果是 0，那么对于当前的 0 计算之后 0 xor 0 = 0
+		如果前面的计算结果是 1，那么对于当前的 0 计算之后 0 xor 1 = 1
+	所以对于一个二进制位串而言，异或的结果只取决于串中 二进制位 1 的数量，可以说 二进制位 0 被屏蔽（被过滤）掉了。二进制 1 的数量是偶数，异或结果为 0；二进制 1 的数量是奇数，异或结果为 1.
+    从以上的结论，我们还可以大胆的推出一下论述：
+	异或运算结果与二进制位串中二进制位的顺序无关！
+    由此来看，异或运算满足交换律和结合律是显而易见的。
+
+回到原题，有一个数组，数组中只有一个数字是单身狗，其余数字都是成双入对的。我们只要把数组中所有的数字都进行 异或运算 就可以把那条单身狗揪出来，运算结束的结果就是那个单独的数字（思考为什么）。
+
+【Python代码】
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def singleNumber(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: int
+        """
+        result = 0
+        for i in nums:
+            result ^= i
+        return result
+
+solution = Solution()
+nums = [1,2,3,4,5,5,4,3,2]
+print solution.singleNumber(nums)
+
+137.Single Number II
+  Given an array of integers, every element appears three times except for one. Find that single one.
+
+Note:
+Your algorithm should have a linear runtime complexity. Could you implement it without using extra memory? 
+
+【思路】
+    在 136.Single Number 中巧妙地用异或运算解决了把重复的元素的“消除”，只留下“落单”的元素的问题。而在 Single Number II 中，除了要找的元素，每个元素都出现 3 次，136 的解法适用于出现偶数次的情况，但对于奇数次已不再适用。
+    考虑每个数用二进制展开，将各个数横向比较：对于一个32位（或者64位）的整数，对于这32个位中的某个位而言，如果每个数都出现三次，那么对于所有数在这个位上“1”的个数，一定是 3 的倍数；而反之，如果存在某个数不是出现 3 次（也不是 3 的倍数次，这是题目未讲明处，I 亦同理如此），那么对于它的二进制展开后数为 1 的位而言，对于所有数在这个位上“1”的个数，一定不是 3 的倍数。
+【注意】
+    不同的语言中对位运算尤其是符号位的处理是不尽相同的，比如 C++ 中最高位是符号位，如果不是 3 的倍数那么最后的 结果 就是负数，符号位可以和其他位一样处理；但如果是Python，由于其动态类型的特性，当超出数据范围时，会自动转化为更大范围的数据类型，而不会将其作为符号位处理。
+
+【Python代码】
+#!usr/bin/env python
+#!encoding:utf-8
+import sys
+
+class Solution(object):
+    def singleNumber(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: int
+        """
+        res = 0
+        tmp = 1
+        for i in xrange(32):
+            count = 0
+            for j in nums:
+                if j&tmp != 0:
+                    count += 1
+            count %= 3
+            if count == 1 and i != 31:
+                res |= tmp
+            elif i == 31 and count == 1:
+                res = -(2 ** 31 - res)
+            tmp <<= 1
+        return res
+
+solution = Solution()
+nums = [1,2,3,1,2,3,-4,1,2,3]
+print solution.singleNumber(nums)
+        
+
+260.Single Number III
+  Given an array of numbers nums, in which exactly two elements appear only once and all the other elements appear exactly twice. Find the two elements that appear only once.
+
+For example:
+
+Given nums = [1, 2, 1, 3, 2, 5], return [3, 5].
+
+Note:
+
+    The order of the result is not important. So in the above example, [5, 3] is also correct.
+    Your algorithm should run in linear runtime complexity. Could you implement it using only constant space complexity?
+
+【思路】来自Leetcode Discuss:
+       【Source】:https://discuss.leetcode.com/topic/21605/accepted-c-java-o-n-time-o-1-space-easy-solution-with-detail-explanations
+Once again, we need to use XOR to solve this problem. But this time, we need to do it in two passes:
+
+    In the first pass, we XOR all elements in the array, and get the XOR of the two numbers we need to find. Note that since the two numbers are distinct, so there must be a set bit (that is, the bit with value '1') in the XOR result. Find
+    out an arbitrary set bit (for example, the rightmost set bit).
+
+    In the second pass, we divide all numbers into two groups, one with the aforementioned（前述的；上述的） bit set, another with the aforementinoed bit unset. Two different numbers we need to find must fall into the two distrinct groups. XOR numbers in each group, we can find a number in either group.
+
+【Complexity】
+
+    Time: O (n)
+
+    Space: O (1)
+
+【Python代码】
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def singleNumber(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: List[int]
+        """
+        one_pass = 0
+        for i in nums:
+            one_pass ^= i
+        temp = 1
+        while temp&one_pass == 0:
+            temp <<= 1
+        group_one = 0
+        group_two = 0
+        for i in nums:
+            if i&temp == 0:
+                group_one ^= i
+            else:
+                group_two ^= i
+        return [group_one, group_two]
+
+nums = [1,-2,1,-3,-2,5]
+solution = Solution()
+print solution.singleNumber(nums)
+

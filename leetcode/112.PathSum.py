@@ -1,0 +1,45 @@
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class TreeNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+class Solution(object):
+    def hasPathSum(self, root, sum):
+        if root == None:
+            return False
+        stack = [[root,sum]]
+        cur = root
+        while len(stack) >= 1:
+            while cur != None and cur.left != None:
+                sum -= cur.val
+                stack.append([cur, sum])
+                cur = cur.left
+            if cur != None and cur.right == None and sum == cur.val:
+                return True
+            elif cur == None or cur.right == None:
+                tmp = stack.pop()
+                cur = tmp[0].right
+                sum = tmp[1]
+            else:
+                sum -= cur.val 
+                cur = cur.right
+        return False
+
+    def hasPathSum_recurse(self, root, sum):
+        """
+        :type root: TreeNode
+        :type sum: int
+        :rtype: bool
+        """ 
+        if root == None:
+            return False
+        elif root.left == None and root.right == None and root.val == sum:
+            return True
+        else:
+            return self.hasPathSum(root.left, sum - root.val) or self.hasPathSum(root.right, sum - root.val)
+

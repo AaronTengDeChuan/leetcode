@@ -1,0 +1,161 @@
+131. Palindrome Partitioning
+	和 132. Palindrome Partitioning II
+131 题干
+Given a string s, partition s such that every substring of the partition is a palindrome.
+
+Return all possible palindrome partitioning of s.
+
+For example, given s = "aab",
+Return
+
+[
+  ["aa","b"],
+  ["a","a","b"]
+]
+
+132 题干
+Given a string s, partition s such that every substring of the partition is a palindrome.
+
+Return the minimum cuts needed for a palindrome partitioning of s.
+
+For example, given s = "aab",
+Return 1 since the palindrome partitioning ["aa","b"] could be produced using 1 cut. 
+
+131题 简单来说就是给定一个字符串，将字符串分成多个部分，满足每一部分都是回文串，请输出所有可能的情况。
+
+    该问题的难度比较大，很可能第一次遇到没有思路，这很正常。下面我们一点点分析，逐步理清思路。先不考虑所有的情况，针对一个符合条件的划分，每一部分都是一个回文子串，而且各部分的长度不固定。也即每一部分都是原始字符串的一个子串，且满足回文条件。所有的划分都满足上述条件，所以这就启发我们首先判断原始字符串的任意子串是否为回文子串。判断一个字符串是否为回文串最简单的方法是对字符串进行遍历。得到回文子串的结果之后我们该如何利用去获得所有可能的划分呢？此时，该问题就变为一个典型的深搜问题，问题的解空间就是所有可能划分的划分树，我们只需要遍历所有的分支直到叶节点，即为一个可能的划分。按照这个思路完成的代码如下：
+public class Solution {
+    public ArrayList<ArrayList<String>> partition(String s) {
+        int[][] dp=new int[s.length()][s.length()];
+        
+        ArrayList<ArrayList<String>> result=new ArrayList<ArrayList<String>>();
+        ArrayList<String> r=new ArrayList<String>();
+        
+        for(int i=0;i<s.length();i++)
+        {
+            for(int j=i;j<s.length();j++)
+            {
+                int k=0;
+                for(;k<(j-i+1)/2;k++)
+                {
+                    if(s.charAt(i+k)!=s.charAt(j-k)) break;
+                }
+                
+                if(k==(j-i+1)/2)
+                {
+                	dp[i][j]=1;
+                }
+            }
+        }
+        
+        dfs(0,s,dp,r,result);
+        
+        return result;
+    }
+    
+void dfs(int i,String s,int[][] dp,ArrayList<String> r,ArrayList<ArrayList<String>> result)
+    {
+        if(i==s.length())
+        {
+        	ArrayList<String> t=new ArrayList<String>(r);
+        	Collections.reverse(t);
+            result.add(t);
+            return;
+        }
+        
+        for(int j=i;j<s.length();j++)
+        {
+            if(dp[i][j]==1)
+            {
+                r.add(0,s.substring(i,j+1));
+                dfs(j+1,s,dp,r,result);
+                r.remove(0);
+            }
+        }
+    }
+}
+    上述代码看似比较复杂，但其实就两个简单的部分：判断子串是否为回文串，然后深搜遍历所有的划分。判断子串是否为回文串采用了最朴素的循环遍历，在该题通过了测试，但是在第二题中将会超时，后面还会提到。深搜函数最重要的参数是第一个i，用来表示从字符串的i位置开始求划分，如果i已经超过了字符串的长度就说明完成了划分，保存一个可能的结果。如果i没有到字符串末尾，则判断从i开始到哪些位置是回文串，保存该回文串，然后从下一个位置继续深搜。如此就可以获得所有的划分。
+
+132题 该问题是问题I的变种，现在不求所有的划分，而只求分组个数最小的划分。
+    算法II判断字符串从i到j的子串是否为回文串时用了算法I中最朴素的蛮力方法，也即通过遍历的方法判断从i到j的子串是否为回文串，这种方法的复杂度为O(n^3)。这是因为总共有n2个子串，每个子串判断是否为回文串的复杂度最大为O(n)，因而整个判断的复杂度为O(n3)，这个可以通过公式简单推导。由于深搜部分采用了备忘录方法，算法复杂度实际为O(n^2)，现在算法还超时只能说明判断子串是否为回文串的朴素方法太慢，需要修改。事实上，该部分确实有更优的算法，朴素方法太慢的原因是我们没有考虑相邻子串之间的相关性。假设现在我们已经知道S(i,j)是回文串，则我们可以在O(1)的时间内知道S(i-1,j+1)是否是回文串。这是因为字符串S(i-1,j+1)是在字符串S(i,j)的两头各添加一个字符构成的新串，如果现在满足S(i-1)等于S(j+1)，则说明S(i-1,j+1)是回文串，否则就不是回文串。这表明我们可以利用子串之间的相关性来快速判断一个子串是否是回文串。该问题也是一个DP问题，算法复杂度只有为O(n^2)，相比朴素的算法，复杂度降低了一个数量级。
+    定义P[i][j]表示字符串从i到j的子串是否为回文串，
+	则dp[i][j]满足公式：dp[i][j] = (str[i] == str[j] && dp[i+1][j-1])。
+    获得公式之后，DP算法面临的下一个问题是计算顺序和初始化的问题。P[i][j]依赖于P[i+1][j-1]，表示我们必须要从最后一行开始从左到右计算一个上对角矩阵。
+
+    
+    上面已经找到了一个比较快的求回文串的算法，接下来我们根据已经得到的回文串二维数组计算最小划分。
+    我们定义一个新的一维count数组，用来表示从位置i开始到最后的最小划分个数。这时有公式：
+				count[i] = min{1 + count[j + 1] | dp[i][j] == 1 and i <= j < len}
+    公式的含义是，从i开始的字符串的最小划分为：如果从位置i到位置j的子串是回文串，则从i开始的划分可以通过将i到j的子串看作划分的一部分，然后加上从j+1位置开始的子串最小划分，并选择可能情况中的最小值即为从i开始的最小划分。
+    完成通项公式的构造，下一步是考虑计算顺序和初始化。由于count[i]依赖于比i更大的count元素，所以i循环应该倒序。j的取值范围从i到len-1，正序和倒序均可。需要初始化的元素为最后一个count元素，其满足count[len]=0。按照这个思路我们可以很快写出一个AC代码：
+class Solution(object):
+    def minCut(self, s):
+        """
+        :type s: str
+        :rtype: int
+        """
+        dp = [[0] * len(s) for i in range(len(s))]
+        count = [len(s)] * (len(s) + 1)
+        count[len(s)] = 0
+        for i in range(len(s) - 1, -1, -1):
+            for j in range(i, len(s)):
+                if s[i] == s[j] and (j - i < 3 or dp[i + 1][j - 1] == 1):
+                    dp[i][j] = 1
+                    if j == len(s) - 1:
+                        count[i] = 0
+                    elif count[i] > 1 + count[j + 1]:
+                        count[i] = 1 + count[j + 1]
+        return count[0]
+
+139.Word Break
+  Given a string s and a dictionary of words dict, determine if s can be segmented into a space-separated sequence of one or more dictionary words.
+
+For example, given
+s = "leetcode",
+dict = ["leet", "code"].
+
+Return true because "leetcode" can be segmented as "leet code". 
+
+【思路】
+最朴素的解法是回溯法，很自然的超时了。
+试一试是否可以使用动态规划来解这个问题：
+    dp[i] == True,代表是 s[:i] 可以分割成 space-separated sequence，否则不能。
+    dp[i + 1] = s[j:i + 1] in dict 并且 dp[j] == True,其中 0<=j<=i(只要有一个成立，dp[i + 1] = True)
+递推式已经有了，DP 可以解决此问题。
+
+【进一步优化（optimize）】 
+从问题的解决方面来说，
+	（1）dp 数组中对我们解题有帮助的部分仅仅是使分割成立的那些，即 dp[i] = True 对我们有用，所以只需保存 这些 True 对应的下标。 
+	（2）判断 s[j:i + 1] 是否在 dict 中时，如果 s[j:i + 1] 的长度大于 dict 最长字符串的长度，无需查找；同理，无需查找那些长度小于 dict 中最短字符串的长度的字符串。
+	（3）针对（2），倒着遍历 dp 数组更有效率。
+
+【Python代码】
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def wordBreak(self, s, wordDict):
+        dp = [0]
+        max = 0
+        for i in wordDict:
+            if len(i) > max:
+                max = len(i)
+        for i in range(len(s)):
+            for j in dp[::-1]:
+                if (i - j + 1) > max:
+                    break
+                if s[j:i + 1] in wordDict:
+                    dp.append(i + 1)
+                    break
+        if dp[-1] == len(s):
+            return True
+        else:
+            return False
+
+solution = Solution()
+s = 'leetcode'
+wordDict = ("code","leet")
+print solution.wordBreak(s, wordDict)
+
+

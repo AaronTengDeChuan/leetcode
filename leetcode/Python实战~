@@ -1,0 +1,2901 @@
+* Python笔记——基本数据结构:列表、元组及字典 
+**网址：http://blog.csdn.net/wklken/article/details/6312888
+
+
+
+*题目来源：leetcode
+
+**29.Divide Two Integers
+  Divide two integers without using multiplication, division and mod operator.
+
+If it is overflow, return MAX_INT. 
+
+思路：
+1.不允许使用乘法、除法以及取模操作符。使用 加法、减法、左移和右移 操作来解题。
+2.x/y = n, 则有 x = n*y, n 为倍数， n 可以表示成二进制 n = 11011。
+3.由此可以想到使用 迭代法 快速逼近 x， 倍数 = 1 + 2 + 4 + 8 + ... , 迅速找到 小于 x 的最大的 y 的 倍数（sum = 倍数 * y）， 也就是说，找到了 n 的最高位。
+4.接下来，sum每右移一位（即除以2）。确定 n 的下一位，判断 若 sum <= 被除数， n的这一位为 1，否则 为 0。
+5.如果 被除数 < 除数，结束
+
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def divide(self, dividend, divisor):
+        """
+        :type dividend: int
+        :type divisor: int
+        :rtype: int
+        """
+        if divisor == 0:	#除数为0，越界
+            return sys.maxint
+        flag = 0
+        if dividend < 0:
+            flag += 1
+            dividend = -dividend
+        if divisor < 0:
+            flag += 1
+            divisor = -divisor
+        sum = divisor
+        num = 1
+        result = 0
+        while sum <= dividend:
+            num <<= 1		#左移
+            sum <<= 1		
+        num >>= 1
+        sum >>= 1		#右移
+        while dividend >= divisor:
+            if dividend >= sum:
+                result += num
+                dividend -= sum
+            sum >>= 1
+            num >>= 1
+        if flag == 1:
+            return -result
+        else:
+            if result > 2147483647:	#判断越界
+                return 2147483647
+            return result
+
+
+solution = Solution()
+dividend = raw_input("dividend = ")
+divisor = raw_input("divisor = ")
+print solution.divide(int(dividend), int(divisor))
+
+
+
+
+
+
+**30.Substring with Concatenation of All Words
+  You are given a string, s, and a list of words, words, that are all of the same length. Find all starting indices of substring(s) in s that is a concatenation of each word in words exactly once and without any intervening characters.
+
+For example, given:
+s: "barfoothefoobarman"
+words: ["foo", "bar"]
+
+You should return the indices: [0,9].
+(order does not matter). 
+
+思路：
+1.计算words列表中字符串的数量 words_size
+2.计算words列表中字符串的长度 word_len, 因为列表中字符串是等长的，所以计算一个就可以
+3.使用字典结构，把words列表中的每个字符串与它在words列表中出现的次数对应起来， 即words_dict = {word：count}
+4.从原字符串s中截取长度为 words_size * word_len 的子串substr
+5.将substr切分成长度均为 word_len 的字符串，计算每一个切分后的字符串在 substr 中出现的次数，使用字典结构 counting 保存
+6.比较 counting 和 words_dict 两个字典中相应键值 key 的 count 值是否相等，若不等子串 substr 不符题目要求，否则得到了一个满足的 indice
+7.回到第4步，依次切分子串
+
+
+AC的Python源码如下：
+
+class Solution(object):
+    def findSubstring(self, s, words):
+        """
+        :type s: str
+        :type words: List[str]
+        :rtype: List[int]
+        """
+        word_len = len(words[0])
+        words_size = len(words)
+        words_dict = {}
+        result = []
+        for word in words:
+            words_dict[word] = 0
+	for word in words:
+            words_dict[word] += 1
+	#print words_dict
+        counting = {}
+        for i in range(0,len(s) - words_size*word_len + 1):
+            counting.clear()
+            for j in range(0,words_size):
+		word = s[i + j*word_len:i + j*word_len+word_len]
+                if not words_dict.has_key(word):
+                    break
+                elif counting.has_key(word):
+		    if counting[word] >= words_dict[word]:
+                        break
+	 	    else:
+                        counting[word] += 1
+                else:
+                    counting[word] = 1
+            else:
+                #如果for循环未被break终止，则执行else块中的语句
+                result.append(i)
+        return result
+
+使用到的细节：
+	字典的声明：counting = {}
+	Python中没有自增和自减运算符：使用 += 1 和 -= 1
+	清空字典：counting.clear()
+	判断字典中是否存在某键值对：counting.has_key(key) 或者 if key in counting /not in
+	向字典增加键值：counting[key] = value
+	for else语句：如果for循环未被break终止，则执行else块中的语句
+
+
+
+**32.Longest Valid Parentheses
+  Given a string containing just the characters '(' and ')', find the length of the longest valid (well-formed) parentheses substring.
+
+For "(()", the longest valid parentheses substring is "()", which has length = 2.
+
+Another example is ")()())", where the longest valid parentheses substring is "()()", which has length = 4.
+
+Subscribe to see which companies asked this question
+
+思路：
+利用动态规划的方法解题，时间复杂度O（N），空间复杂度O（N）。
+1.生成一个列表dp_list，列表元素个数为括号串s的长度
+2.dp_list[i]记录以s中下标为i的括号开始的最长有效括号串的长度
+3.状态转移：
+	如果 dp_list[i - 1] == '('  and  dp_list[i - 1 + dp[i] + 1] == ')', 
+	那么 dp_list[i - 1] = dp_list[i] + 2, dp_list[i - 1] += dp[i - 1 + dp[i] + 2] 
+	如果 dp_list[i - 1] == ')', 那么dp_list[i - 1] = 0
+4.从后往前计算 dp_list ，并记录最长的有效括号串的长度max_len
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def longestValidParentheses(self,s):
+        """
+        :type s: str
+        :rtype: int
+        """
+        dp_list = []
+        max_len = 0
+        for i in range(len(s)):
+            dp_list.append(0)
+        for j in range(-2,-len(s) - 1,-1):
+            end = j + dp_list[j+1] + 1
+            if s[j] == '(':
+                if end < 0 and s[end] == ')':
+                    dp_list[j] = dp_list[j+1] + 2
+                    if end + 1 < 0:
+                        dp_list[j] += dp_list[end+1]
+            if max_len < dp_list[j]:
+                max_len = dp_list[j]
+        return max_len
+
+s = "()"
+solution = Solution()
+print solution.longestValidParentheses(s)
+
+使用到的细节：
+列表从后往前的下标为-1，-2，...，-len(list)
+对列表进行操作时，注意边界是否越界
+
+
+
+**33.Search in Rotated Sorted Array
+  Suppose a sorted array is rotated at some pivot unknown to you beforehand.
+
+(i.e., 0 1 2 4 5 6 7 might become 4 5 6 7 0 1 2).
+
+You are given a target value to search. If found in the array return its index, otherwise return -1.
+
+You may assume no duplicate exists in the array.
+
+Subscribe to see which companies asked this question
+
+
+思路：
+使用二分查找的方法
+分三种情况讨论：
+mid = (left + right) / 2
+1.A[left] < A[right] , 即下标范围在 left 和 right 之间的数组是升序排列的
+2.A[left] < A[mid] and A[left] > A[right] , 说明下标范围在 left 和 mid 之间是升序的 ，mid 和 right 之间序列是断开的，即先升序到最大值，在从最小值升序到数组结尾
+3.A[mid] < A[right] and A[left] > A[right] , 说明下标范围在 mid 和 right 之间是升序的 ，left 和 mid 之间序列是断开的，即先升序到最大值，在从最小值升序到mid
+
+(1)若A[mid] == target , 返回 mid 并结束，否则继续执行
+(2)第一种情况下：若A[mid] > target , 则right = mid -1；否则 left = mid +1 
+   第二种情况下：若A[mid] < target 或者 A[left] > target , 则 left = mid + 1;否则 right = mid - 1
+   第三种情况下：若A[mid] > target 或者 A[right] < target, 则 right = mid - 1;否则 left = mid + 1
+   返回（1）继续执行 
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def search(self,nums,target):
+        """
+        :type nums: List[int]
+        :type target: int
+        :rtype: int
+        """
+        left = 0
+        right = len(nums) - 1
+        while left <= right:
+            mid = (left + right)/2
+            if nums[mid] == target:
+                return mid
+            if nums[left] < nums[right]:
+                #第一种情况
+                if nums[mid] < target:
+                    left = mid + 1
+                else:
+                    right = mid - 1
+            elif nums[left] <= nums[mid]:
+                if nums[mid] < target or nums[left] > target:
+                    left = mid + 1
+                else:
+                    right = mid - 1
+            else:
+                if nums[mid] > target or nums[right] < target:
+                    right = mid - 1
+                else:
+                    left = mid + 1 
+        return -1
+
+nums = [3,1]
+solution = Solution()
+target = int(raw_input("Enter your input:"))
+print "The result is " , solution.search(nums,target)
+
+
+
+
+**34.Search for a Range
+  Given a sorted array of integers, find the starting and ending position of a given target value.
+
+Your algorithm's runtime complexity must be in the order of O(log n).
+
+If the target is not found in the array, return [-1, -1].
+
+For example,
+Given [5, 7, 7, 8, 8, 10] and target value 8,
+return [3, 4]. 
+
+思路：
+1. 先找左边界。当mid == target,将right移动到mid，继续查找左边界。最后如果没有找到target,退出
+2. 再找右边界。当mid == target,将left移动到mid，继续查找左边界。最后如果没有找到target,退出 
+查找的时候注意边界条件：
+	查找到左边界后，要先判断 nums[left] == target , 再判断 nums[right] == target
+	查找到右边界后，要先判断 nums[right] == target , 再判断 nums[left] == target
+	这样是为了处理 nums[left] 和 nums[right] 都等于 target 的情况 ， 显然左边界应该为 left ， 右边界应为 right
+有一种更好的办法，while循环的条件改为 left < right - 1 ， 请思考为什么？
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def searchRange(self, nums, target):
+        """
+        :type nums: List[int]
+        :type target: int
+        :rtype: List[int]
+        """
+        left = 0
+        right = len(nums) - 1
+        result = [-1,-1]
+        while left < right:
+            mid = (left + right) / 2
+            if nums[mid] > target:
+                right = mid - 1
+            elif nums[mid] < target:
+                left = mid + 1
+            else:
+                if right == mid:
+                    break
+                right = mid
+        if nums[left] == target:
+            result[0] = left
+        elif nums[right] == target:
+            result[0] = right
+        else:
+            return result
+        left = 0
+        right = len(nums) - 1
+        while left < right:
+            mid = (left + right) / 2
+            if nums[mid] > target:
+                right = mid - 1
+            elif nums[mid] < target:
+                left = mid + 1
+            else:
+                if left == mid:
+                    break
+                left = mid
+        if nums[right] == target:
+            result[1] = right
+        elif nums[left] == target:
+            result[1] = left
+        else:
+            return result
+        return result
+
+
+solution = Solution()
+nums = [2,2]
+target = 2
+print solution.searchRange(nums,target)
+
+
+
+**35.Search Insert Position
+  Given a sorted array and a target value, return the index if the target is found. If not, return the index where it would be if it were inserted in order.
+
+You may assume no duplicates in the array.
+
+Here are few examples.
+[1,3,5,6], 5 → 2
+[1,3,5,6], 2 → 1
+[1,3,5,6], 7 → 4
+[1,3,5,6], 0 → 0 
+
+思路：
+使用二分查找的思想
+1.使用一个变量 pre 记录上一次 mid 的值 
+2.while循环内就是二分查找的代码（无需改动），只需加入记录上一次 mid 的 值
+3.若查找到目标值，返回对应下标；
+  否则，比较 nums[pre] 与 target 的大小
+	若 nums[pre] > target , 返回 pre
+	否则 ， 返回 pre + 1
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def searchInsert(self, nums, target):
+        """
+        :type nums: List[int]
+        :type target: int
+        :rtype: int
+        """
+        left = 0
+        right = len(nums) - 1
+        pre = -1
+        while left <= right:
+            mid = (left + right) / 2
+            pre = mid
+            if nums[mid] == target:
+                return mid
+            elif nums[mid] < target:
+                left = mid + 1
+            else:
+                right = mid - 1
+        if nums[pre] < target:
+            return pre + 1
+        else:
+            return pre
+
+solution = Solution()
+nums = [1,3,5,6]
+target = 5.5
+print solution.searchInsert(nums,target)
+
+
+
+
+**39.Combination Sum
+  Given a set of candidate numbers (C) and a target number (T), find all unique combinations in C where the candidate numbers sums to T.
+
+The same repeated number may be chosen from C unlimited number of times.
+
+Note:
+
+    All numbers (including target) will be positive integers.
+    The solution set must not contain duplicate combinations.
+
+For example, given candidate set [2, 3, 6, 7] and target 7,
+A solution set is:
+
+[
+  [7],
+  [2, 2, 3]
+]
+
+
+思路：
+使用回溯的思想。
+1.先对数组进行排序
+2.从 target 中减，target == 0 时，说明有一个新的组合符合要求
+3.列表为空或者列表的首值大于 target，回溯
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def combinationSum(self, candidates, target):
+        """
+        :type candidates: List[int]
+        :type target: int
+        :rtype: List[List[int]]
+        """
+        result = []
+        results = []
+        candidates.sort(key = lambda number : number)
+        candidate = []
+        [ candidate.append(i) for i in candidates if not i in candidate]
+        self.solveSum(candidate, target, 0, results, result)
+        return results
+
+    def solveSum(self, candidate, target, index, results, result):
+        if target == 0:
+            results.append([i for i in result])
+            return
+        if index >= len(candidate) or candidate[index] > target:
+            return
+        for i in range(index, len(candidate)):
+            result.append(candidate[i])
+            self.solveSum(candidate, target - candidate[i], i, results, result)
+            result.pop()
+
+
+solution = Solution()
+candidates = []
+target = 4
+print solution.combinationSum(candidates , target)
+
+使用时的细节：
+对列表排序：list.sort()
+对列表内元素消重：candidate = []
+       		 [ candidate.append(i) for i in candidates if not i in candidate]
+删除列表的最后一个元素：result.pop()
+
+
+
+
+**40.Combination Sum II
+  Given a collection of candidate numbers (C) and a target number (T), find all unique combinations in C where the candidate numbers sums to T.
+
+Each number in C may only be used once in the combination.
+
+Note:
+
+    All numbers (including target) will be positive integers.
+    The solution set must not contain duplicate combinations.
+
+For example, given candidate set [10, 1, 2, 7, 6, 1, 5] and target 8,
+A solution set is:
+
+[
+  [1, 7],
+  [1, 2, 5],
+  [2, 6],
+  [1, 1, 6]
+]
+
+思路：
+与39题一样使用回溯法：和39题的区别是集合C中有重复的元素，但是每个元素只能使用一次。
+1.所以，对于符合条件的结果，在加入到结果集 results 之前要判断是否已存在
+2.思考题：为什么39题不用考虑重复，而40题需要消重
+
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def combinationSum2(self, candidates, target):
+        """
+        :type candidates: List[int]
+        :type target: int
+        :rtype: List[List[int]]
+        """
+        result = []
+        results = []
+        candidates.sort(key = lambda number : number)
+        self.solveSum(candidates, target, 0, results, result)
+        return results
+
+    def solveSum(self, candidate, target, index, results, result):
+        if target == 0:
+            if result not in results:
+                results.append([i for i in result])
+            return
+        if index >= len(candidate) or candidate[index] > target:
+            return
+        for i in range(index, len(candidate)):
+            if candidate[i] > target:
+                break
+            result.append(candidate[i])
+            self.solveSum(candidate, target - candidate[i], i + 1, results, result)
+            result.pop()
+
+
+solution = Solution()
+candidates = [10,1,2,7,6,1,5]
+target = 8
+print solution.combinationSum2(candidates , target)
+
+
+
+
+**41.First Missing Positive
+  Given an unsorted integer array, find the first missing positive integer.
+
+For example,
+Given [1,2,0] return 3,
+and [3,4,-1,1] return 2.
+
+Your algorithm should run in O(n) time and uses constant space. 
+
+思路：
+1.把数组中的元素放入“合适”的位置时，例如将1放在0位置上，2放在1位置上。
+2.最后遍历数组，如果某个位置上的数不合适，则返回该位置上“合适”的数，也就是First Missing Positive；
+  如果数组的每一个数都合适，则返回数组长度加1
+程序设计时：
+    对于数组中的某一个位置 i，程序从这个位置继续向后遍历数组的条件是
+	--要么，这个位置填入了“合适的”数（nums[i] == i + 1）
+	--要么，这个位置上的数大于或等于数组的长度,或者小于或等于0（ nums[i] >= len(nums) or nums[i] <= 0）
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def firstMissingPositive(self, nums):
+        """
+        :type num: List[int]
+        :rtype: int
+        """
+        size = len(nums)
+        if size == 0:
+            return 1
+        for i in range(size):
+            while nums[i] != i + 1:
+                if nums[i] >= size or nums[i] <= 0 or nums[i] == nums[nums[i] - 1]:
+                    break
+                temp = nums[i]
+                nums[i], nums[temp - 1] = nums[temp - 1], nums[i]
+        for i in range(size):
+            if nums[i] != i + 1:
+                return i + 1
+        else:
+            return i + 2
+
+solution = Solution()
+nums = [3,4,-1,1]
+print solution.firstMissingPositive(nums)
+
+
+
+
+**42.Trapping Rain Water
+  Given n non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it is able to trap after raining.
+
+For example,
+Given [0,1,0,2,1,0,1,3,2,1,2,1], return 6. 
+
+
+思路：
+两个指针 left 和 right 。
+1.从数组的两端找到递增序列的终点(即有效的两边)， 分别为 left 和 right ，因为由左右两端向中间递增的序列，不可能存储水
+2.然后选择 left 和 right 所代表的边中较短的
+	如果 left 较短，开始向右移动，直到找到一个比左边高的边（如果找的边是 right，程序结束），这条边是新的 left 边
+	如果 right 较短，开始向左移动，直到找到一个比右边高的边（如果找的边是 left，程序结束），这条边是新的 right 边
+	在寻找下一个 left 或者 right 边的过程中，累计存水量
+  继续 2
+
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def trap(self, height):
+        """
+        :type height: List[int]
+        :rtype: int
+        """
+        left = 0
+        right = len(height) - 1
+        water = 0
+        while left < right - 1 and height[left] <= height[left + 1]:
+            left += 1
+        while right >left + 1 and height[right] <=height[right - 1]:
+            right -= 1
+        while left < right:
+            l = height[left]
+            r = height[right]
+            if l < r:
+                while left < right and height[left] <= l:
+                    water += l - height[left]
+                    left += 1
+            else:
+                while left < right and height[right] <= r:
+                    water += r - height[right]
+                    right -= 1
+        return water
+
+solution = Solution()
+height = [0,1,0,2,1,0,1,3,2,1,2,1]
+print solution.trap(height)
+
+
+
+
+
+**43.Multiply Strings
+  Given two numbers represented as strings, return multiplication of the numbers as a string.
+
+Note:
+
+    The numbers can be arbitrarily large and are non-negative.
+    Converting the input string to integer is NOT allowed.
+    You should NOT use internal library such as BigInteger.
+
+
+
+思路：
+模拟手算
+1.乘数从最低位开始，每一位乘以被乘数后结果放入中间变量 temp ，更新结果 result = result + temp 
+2.被乘数左移一位，后端补零，在字符串中就是在尾部填 ‘0’ 字符实现 ， 继续 1，直到乘数所有位都处理完
+
+可以单独写一个相加函数：add（num1, num2）
+
+注意：
+	python 中 str类型 和 int类型 不能放在一起运算，想要实现 数字字符转换成数字（即 num = c - '0'）， 需要借助 ord()函数
+	ord() 函数的职能：将字符转换成对应的ASCII码值
+	chr() 函数的职能：将ASCII码值转换成对应的字符
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def add(self, num1, num2):
+        result = ""
+        carry = 0
+        for i in range(min(len(num1), len(num2))):
+            sum = (ord(num1[i]) - ord('0')) + (ord(num2[i]) - ord('0')) + carry
+            carry = sum / 10
+            c = sum % 10 + ord('0')
+            result += chr(c)
+        if len(num1) == 0 or len(num2) == 0:
+            i = -1
+        if len(num1) < len(num2):
+            for j in range(i + 1, len(num2)):
+                sum = ord(num2[j]) - ord('0') + carry
+                carry = sum / 10
+                c = sum % 10 + ord('0')
+                result += chr(c)
+        if len(num1) > len(num2):
+            for j in range(i + 1,len(num1)):
+                sum = ord(num1[j]) - ord('0') +carry
+                carry = sum / 10
+                c = sum % 10 + ord('0')
+                result += chr(c)
+        c = carry + ord('0')
+        result += chr(c)
+        return result
+
+
+    def multiply(self, num1, num2):
+        """
+        :type num1: str
+        :type num2: str
+        :rtype: str
+        """
+        result = ""
+        for i in range(-1, -len(num1) - 1, -1):
+            temp = ""
+            carry = 0
+            for j in range(-1, -len(num2) - 1, -1):
+                mul = (ord(num1[i]) - ord('0')) * (ord(num2[j]) - ord('0')) + carry
+                carry = mul / 10
+                c = mul % 10 + ord('0')
+                temp += chr(c)
+            c = carry + ord('0')
+            temp += chr(c)
+            result = self.add(result, temp)
+            num2 += '0'
+        res = ""
+        i = -1
+        while i > -len(result) and result[i] == '0':
+            i -= 1
+        for j in range(i, - len(result) - 1, -1):
+                res += result[j]
+        return res
+
+solution = Solution()
+num1 = "0"
+num2 = "0"
+print solution.multiply(num1, num2)
+
+
+
+
+**46.Permutations
+  Given a collection of distinct numbers, return all possible permutations.
+
+For example,
+[1,2,3] have the following permutations:
+
+[
+  [1,2,3],
+  [1,3,2],
+  [2,1,3],
+  [2,3,1],
+  [3,1,2],
+  [3,2,1]
+]
+
+
+思路：
+两种方法生成全排列
+	1.回溯法：把数组当做集合，从中取出元素后递归
+	2.元素交换Swap加DFS
+
+拓展 第47题：包含重复元素，要求生成不重复的全排列
+  Given a collection of numbers that might contain duplicates, return all possible unique permutations.
+
+For example, [1,1,2,2] have the following unique permutations:
+
+[
+ [1, 1, 2, 2],
+ [1, 2, 1, 2],
+ [1, 2, 2, 1],
+ [2, 1, 1, 2],
+ [2, 1, 2, 1],
+ [2, 2, 1, 1]
+]
+在46题的两种方法上改进：
+	1.回溯法：把数组当做集合， 从中取出不重复的元素后递归。 每一次递归从剩余元素中不重复取数据，保证了从这个位置开始（包括这个位置）的后续递归生成的排列不重复。所以递推地证明，从第一次递归开始的后续递归生成的排列不重复，即全排列不重复。
+	2.元素交换Swap加Dfs:去重的全排列就是从第一个数字起每个数分别与它后面非重复出现的数字交换
+
+
+回溯法源码（重复元素的全排列改动在注释中）：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def backtracking(self, results, result, nums):
+        if len(nums) == 0:
+            results.append([i for i in result])
+            return
+        num = [i for i in nums]
+		#num = []
+        	#[num.append(i) for i in nums if i not in num]
+       		#num_rev = [i for i in nums]
+        for i in num:
+            result.append(i)
+            nums.remove(i)
+            self.backtracking(results, result, nums)
+            result.remove(i)	#result.pop()
+            nums = [i for i in num]	#nums = [j for j in num_rev]
+
+
+    def permute(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: List[List[int]]
+        """
+        results = []
+        result = []
+        self.backtracking(results, result, nums)
+        return results
+
+solution = Solution()
+nums = [1,2,3,4]
+print solution.permute(nums)
+
+
+Swap + Dfs 源码（重复元素的全排列改动在注释中）：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    #这个函数用来决定是否交换，如果下标 start 到 end - 1 之间 存在 与 nums[end] 相同的元素， 不交换
+    #def nowswap(self, nums, start, end):
+    #    if start == end:
+    #        return True
+    #    for i in range(start, end):
+    #        if nums[end] == nums[i]:
+    #           return False
+    #   return True
+
+    def dfs(self, i, nums, results):
+        if i == len(nums):
+            results.append([j for j in nums])
+            return
+        for j in range(i,len(nums)):
+	    #若不满足交换的条件，不交换
+	    #if not self.nowswap(nums, i, j):
+            #    continue
+            nums[i], nums[j] = nums[j], nums[i]
+            self.dfs(i + 1, nums, results)
+            nums[i], nums[j] = nums[j], nums[i]
+
+    def permute(self, nums):
+        results = []
+        self.dfs(0, nums, results)
+        return results
+
+solution = Solution()
+nums = [1,2,3,4]
+print solution.permute(nums)
+
+
+
+
+
+**48.Rotate Image
+  You are given an n x n 2D matrix representing an image.
+
+Rotate the image by 90 degrees (clockwise).
+
+Follow up:
+Could you do this in-place?
+
+
+思路：
+先对矩阵转置，在对转置后的矩阵进行列交换（第一列和最后一列，第二列和倒数第二列，......）
+
+[1 ,2, 3 ,4]		 [1,5,9,13]		[13,9,5,1]
+[5 ,6, 7 ,8]  		 [2,6,10,14]		[14,10,6,2]
+[9 ,10,11,12]   先转置   [3,7,11,15]   列交换    [15,11,7,3]
+[13,14,15,16]		 [4,8,12,16]		[16,12,8,4]
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def rotate(self, matrix):
+        """
+        :type matrix: List[List[int]]
+        :rtype: Void Do not return anything, modify matrix in-place instead.
+        """
+        for i in range(len(matrix) - 1):
+            for j in range(i + 1, len(matrix)):
+                matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]
+        for i in range(len(matrix) / 2):
+            for j in range(len(matrix)):
+                matrix[j][i], matrix[j][len(matrix) - i - 1] = matrix[j][len(matrix) - i - 1], matrix[j][i]
+
+
+
+solution = Solution()
+matrix = [
+    [1,2,3,4,5],
+    [6,7,8,9,10],
+    [11,12,13,14,15],
+    [16,17,18,19,20],
+    [21,22,23,24,25]
+]
+solution.rotate(matrix)
+for i in range(len(matrix)):
+    print matrix[i]
+
+
+
+
+**50.Pow(x, n)
+  Implement pow(x, n). 
+
+思路：
+    把n看成是以2为基的位构成的，因此每一位是对应x的一个幂数，然后迭代直到n到最高位。比如说第一位对应x，第二位对应x*x,第三位对应x^4,...,第k位对应x^(2^(k-1)),可以看出后面一位对应的数等于前面一位对应数的平方，所以可以进行迭代。因为迭代次数等于n的位数，所以算法的时间复杂度是O(logn)。
+    比如 n = 23，应该是 x^16 * x^4 * x^2 * x^1 对应的 n = 10111, 程序实现时可以记录当前迭代的结果。 为了得到 x^16 只做了4次乘法 x^2 -> x^4 -> x^8 ->x^16。
+    在迭代的过程中，如果 n 的二进制表示中某一位 1， 说明这一位代表的 x 的幂是最终结果的因子，因此 n = 23 时，程序做了 4 + 4 = 8 次乘法。 
+    对于 n 位负数的情况，可以先求 x^-n, 在对最后的结果求倒数
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def myPow(self, x, n):
+        """
+        :type x: float
+        :type n: int
+        :rtype: float
+        """
+        flag = False
+        if n < 0:
+            flag = True
+            n = -n
+        result = 1.0
+        curPow = x
+        while n != 0:
+            if n % 2 == 1:
+                result *= curPow
+            curPow *=curPow
+            n = n / 2
+        if flag:
+            result = 1 / result
+        return result
+
+solution = Solution()
+x = raw_input("x = ")
+n = raw_input("n = ")
+print solution.myPow(float(x), int(n))
+
+
+
+
+
+**49.Group Anagrams
+  Given an array of strings, group anagrams together.
+
+For example, given: ["eat", "tea", "tan", "ate", "nat", "bat"],
+Return:
+
+[
+  ["ate", "eat","tea"],
+  ["nat","tan"],
+  ["bat"]
+]
+
+Note: All inputs will be in lower-case.
+
+
+思路：
+把字符串排好序的结果作为key，同一个key的字符串组成的队列作为value，构建一个字典。然后将字典的value，append到结果返回。
+
+AC的Python源代码：
+
+class Solution(object):
+    def groupAnagrams(self, strs):
+        """
+        :type strs: List[str]
+        :rtype: List[List[str]]
+        """
+        d,ans= {},[]
+        for i in strs:
+            sortstr = ''.join(sorted(i))	#对字符串排序
+            if sortstr in d:
+                d[sortstr] += [i]		#将字符串 i append到 sortstr 这个 key 对应的 value 中
+            else:
+                d[sortstr] = [i]		#字典的 value 是一个字符串列表
+        for i in d:
+            ans.append(d[i])			#将字典的所有 value 加入到结果集中
+        return ans
+
+
+
+
+
+**53.Maximum Subarray
+  Find the contiguous subarray within an array (containing at least one number) which has the largest sum.
+
+For example, given the array [-2,1,-3,4,-1,2,1,-5,4],
+the contiguous subarray [4,-1,2,1] has the largest sum = 6.
+
+click to show more practice.
+More practice:
+
+If you have figured out the O(n) solution, try coding another solution using the divide and conquer approach, which is more subtle.
+
+
+
+思路：
+    1.动态规划，dp[i] 表示 以 下标为 i 的数组元素结尾的最大子串和，找出所有 i 中最大的子串和即可.
+      问题的特殊性，可以不申请 dp 数组，记录前一个元素的最大子串和 pre_sum 即可, pre_sum <= 0 时 pre_sum = 当前元素值， pre_sum > 0 时 pre_sum += 当前元素值  （有点贪心的意思呢......）
+    2.分治（Divide and Conquer）
+      题目还要求我们用分治法Divide and Conquer Approach来解，这个分治法的思想就类似于二分搜索法，我们需要把数组一分为二，分别找出左边和右边的最大子数组之和，然后还要从中间开始向左右分别扫描，求出的最大值分别和左右两边得出的最大值相比较取最大的那一个
+
+
+总结：动态规划的时间复杂度为 O（N），从左至右扫描一遍数组即可。
+      而分治法的时间复杂度为 O（N * LogN）， T(N) = N + 2 * T(N / 2), 递推此式得， T(N) = N * LogN + N
+
+
+AC的Python源码（DP）：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def maxSubArray(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: int
+        """
+        max_sum = nums[0]
+        pre_sum = nums[0]
+        for i in range(1,len(nums)):
+            if pre_sum <= 0:
+                pre_sum = nums[i]
+            else:
+                pre_sum += nums[i]
+            if pre_sum > max_sum:
+                max_sum = pre_sum
+        return max_sum
+
+solution = Solution()
+nums = [-2,1,-3,4,-1,2,1,-5,4]
+print solution.maxSubArray(nums)
+
+
+AC的Python源码（Divide and Conquer）：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def divideAndConquer(self, nums, begin, end):
+        if begin == end:
+            return nums[begin]
+        mid = (begin + end) / 2
+        leftMax = self.divideAndConquer(nums, begin,mid)
+        rightMax = self.divideAndConquer(nums, mid + 1, end)
+        leftMid = nums[mid]
+        midRight = nums[mid + 1]
+        sum = leftMid
+        for i in range(mid - 1, begin - 1, -1):
+            sum += nums[i]
+            if sum > leftMid:
+                leftMid = sum
+        sum = midRight
+        for i in range(mid + 2, end + 1):
+            sum += nums[i]
+            if sum > midRight:
+                midRight = sum
+        return max(leftMid + midRight, max(leftMax, rightMax))
+
+
+    def maxSubArray(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: int
+        """
+        return self.divideAndConquer(nums, 0, len(nums) - 1)
+        
+
+solution = Solution()
+nums = [-2,1,-3,4,-1,2,1,-5,4]
+print solution.maxSubArray(nums)
+
+
+
+
+**54.Spiral Matrix
+  Given a matrix of m x n elements (m rows, n columns), return all elements of the matrix in spiral order.
+
+For example,
+Given the following matrix:
+
+[
+ [ 1, 2, 3 ],
+ [ 4, 5, 6 ],
+ [ 7, 8, 9 ]
+]
+
+You should return [1,2,3,6,9,8,7,4,5]. 
+
+
+思路：这是一种相当巧妙的思路，我们这次可以用Iterator来实现了，记录2个方向数组，分别表示在x方向，y方向的前进方向。1表示右或是下，-1表示左或是向上，0表示不动作。
+
+// 1: means we are visiting the row by the right direction.
+
+// -1: means we are visiting the row by the left direction.
+
+int[] x = {1, 0, -1, 0};
+
+// 1: means we are visiting the colum by the down direction.
+
+// -1: means we are visiting the colum by the up direction.
+
+int[] y = {0, 1, 0, -1};
+
+这种方向矩阵将会很常用在各种旋转数组上。 
+
+
+
+源码如下：
+
+ /*
+ 2     Solution 3:
+ 3     使用方向矩阵来求解
+ 4     */
+ 5     
+ 6     public List<Integer> spiralOrder(int[][] matrix) {
+ 7         List<Integer> ret = new ArrayList<Integer>();
+ 8         if (matrix == null || matrix.length == 0 
+ 9             || matrix[0].length == 0) {
+10             return ret;   
+11         }
+12         
+13         int rows = matrix.length;
+14         int cols = matrix[0].length;
+15         
+16         int visitedRows = 0;
+17         int visitedCols = 0;
+18 
+19         // indicate the direction of x    
+20         
+21         // 1: means we are visiting the row by the right direction.
+22         // -1: means we are visiting the row by the left direction.
+23         int[] x = {1, 0, -1, 0};
+24         
+25         // 1: means we are visiting the colum by the down direction.
+26         // -1: means we are visiting the colum by the up direction.
+27         int[] y = {0, 1, 0, -1};
+28         
+29         // 0: right, 1: down, 2: left, 3: up.
+30         int direct = 0;
+31         
+32         int startx = 0;
+33         int starty = 0;
+34         
+35         int candidateNum = 0;
+36         int step = 0;
+37         while (true) {
+38             if (x[direct] == 0) {
+39                 // visit Y axis.
+40                 candidateNum = rows - visitedRows;
+41             } else {
+42                 // visit X axis
+43                 candidateNum = cols - visitedCols;
+44             }
+45             
+46             if (candidateNum <= 0) {
+47                 break;
+48             }
+49             
+50             ret.add(matrix[startx][starty]);
+51             step++;
+52             
+53             if (step == candidateNum) {
+54                 step = 0;
+55                 visitedRows += x[direct] == 0 ? 0: 1;
+56                 visitedCols += y[direct] == 0 ? 0: 1;
+57                 
+58                 // move forward the direction.
+59                 direct ++;
+60                 direct = direct%4;
+61             }
+62             
+63             // 根据方向来移动横坐标和纵坐标。
+64             startx += y[direct];
+65             starty += x[direct];
+66         }
+67         
+68         return ret;
+69     }
+
+
+
+
+
+**56.Merge Intervals
+  Given a collection of intervals, merge all overlapping intervals.
+
+For example,
+Given [1,3],[2,6],[8,10],[15,18],
+return [1,6],[8,10],[15,18]. 
+
+
+思路：
+      先以各区间的 start 为键值对所有区间进行 排序，所有区间排序后 进行合并操作，这里有三种情况：
+	1.interval_1 = [1,3], interval_2 = [2,6]:  即interval_2.start <= interval_1.end <= interval_2.end
+	  这种情况要修改区间 [1,3] 的 end 值， 即interval_1.end = interval_2.end
+	2.interval_1 = [1,6], interval_2 = [3,4]:  即interval_2.end <= interval_1.end
+	  这种情况下，区间[1,6] 不变
+	3.interval_1 = [8,10], interval_2 = [15,18]:  即interval_1.start > interval_2.end
+	  这种情况要将 区间 [15,18] 加入到结果集 中
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Interval(object):
+    def __init__(self, s = 0, e = 0):
+        self.start = s
+        self.end = e
+
+class Solution(object):
+    def merge(self, intervals):
+        """
+        :type intervals: List[Interval]
+        :rtype: List[Interval]
+        """
+        results = []
+        if len(intervals) == 0:
+            return results
+        intervals.sort(key = lambda x:x.start)		#以区间的起始值 start 为键值对所有区间进行排序
+        results.append(intervals[0])
+        for i in range(1, len(intervals)):
+            if intervals[i].start > results[len(results) - 1].end:
+                results.append(intervals[i])
+            elif intervals[i].end <= results[len(results) - 1].end:
+                continue
+            else:
+                results[len(results) - 1].end = intervals[i].end
+        return results
+
+solution = Solution()
+intervals = [Interval(2,6),Interval(8,10),Interval(15,18),Interval(1,3)]
+for i in solution.merge(intervals):
+    print i.start,i.end
+
+
+
+**57.Insert Interval
+  Given a set of non-overlapping intervals, insert a new interval into the intervals (merge if necessary).
+
+You may assume that the intervals were initially sorted according to their start times.
+
+Example 1:
+Given intervals [1,3],[6,9], insert and merge [2,5] in as [1,5],[6,9].
+
+Example 2:
+Given [1,2],[3,5],[6,7],[8,10],[12,16], insert and merge [4,9] in as [1,2],[3,10],[12,16].
+
+This is because the new interval [4,9] overlaps with [3,5],[6,7],[8,10]. 
+
+思路：
+     在原来的区间数组 intervals 上进行修改，从前向后遍历。
+     1.如果出现新区间 newInterval 与现有区间重合的情况， 修改新区间的 start 和 end 值，然后删除引起 区间重合 的区间，继续向后遍历。
+     2.如果 newInterval.end < 当前区间的 start 值，说明新区间应该在当前区间的前面，将新区间插入到当前区间的前面即可，算法结束
+     3.如果 newIntervla.start > 当前区间的 end 值，说明新区间的位置肯定在当前区间之后，继续向后遍历（需要说明的是： 这种情况只会出现在 发生区间重合 之前，这是很显然的。如果出现区间重合的情况，新区间的 start 值一定小于后续区间的 start 值。）
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Interval(object):
+    def __init__(self, s = 0, e = 0):
+        self.start = s
+        self.end = e
+
+class Solution(object):
+    def insert(self, intervals, newInterval):
+        """
+        :type intervals: List[Interval]
+        :type newInterval: Interval
+        :rtype: List[Interval]
+        """
+        i = 0
+        while i < len(intervals):
+            if newInterval.end < intervals[i].start:
+                intervals.insert(i, newInterval)
+                return intervals
+            elif newInterval.start > intervals[i].end:
+                i += 1
+                continue
+            else:
+                if newInterval.start > intervals[i].start:
+                    newInterval.start = intervals[i].start
+                if newInterval.end < intervals[i].end:
+                    newInterval.end = intervals[i].end
+                intervals.remove(intervals[i])
+
+        intervals.append(newInterval)
+        return intervals
+        
+
+
+solution = Solution()
+newInterval = Interval(19,19)
+intervals = [Interval(1,3), Interval(4,6), Interval(8,10), Interval(15,18)]
+for i in solution.insert(intervals, newInterval):
+    print i.start,i.end
+
+
+
+
+**59.Spiral Matrix II
+  Given an integer n, generate a square matrix filled with elements from 1 to n2 in spiral order.
+
+For example,
+Given n = 3,
+You should return the following matrix:
+
+[
+ [ 1, 2, 3 ],
+ [ 8, 9, 4 ],
+ [ 7, 6, 5 ]
+]
+
+
+思路：
+     螺旋写入矩阵，与 54.Spiral Matrix 相同的思路，使用方向矩阵来移动下标，螺旋遍历数组的同时 赋值
+
+
+AC的Python源码如下：
+
+#usr/bin/env python
+#-*-coding":utf-8-*-
+import sys
+
+class Solution(object):
+    def generateMatrix(self, n):
+        """
+        :type n: int
+        :rtype: List[List[int]]
+        """
+        results = []
+        for i in range(n):
+            result = []
+            for j in range(n):
+                result.append(0)
+            results.append(result)
+        direct = 0
+        r = [0,1,0,-1]
+        c = [1,0,-1,0]
+        cur = 1
+        visitedRows = 0
+        visitedCols = 0
+        startr = 0
+        startc = 0
+        cur_step = 0
+        while True:
+            step = 0
+            if r[direct] != 0:
+                step = n - visitedRows
+            else:
+                step = n - visitedCols
+            if step == 0:
+                break
+            print startr,startc
+            results[startr][startc] = cur
+            cur += 1
+            cur_step += 1
+            if cur_step == step:
+                if r[direct] != 0:
+                    visitedCols += 1
+                else:
+                    visitedRows += 1
+                direct += 1
+                direct %= 4
+                cur_step = 0
+            startr += r[direct]
+            startc += c[direct]
+            
+        return results
+solution = Solution()
+n = 4
+for i in solution.generateMatrix(n):
+    print i
+
+
+
+
+**60.Permutation Sequence
+  The set [1,2,3,…,n] contains a total of n! unique permutations.
+
+By listing and labeling all of the permutations in order,
+We get the following sequence (ie, for n = 3):
+
+    1."123"
+    2."132"
+    3."213"
+    4."231"
+    5."312"
+    6."321"
+
+Given n and k, return the kth permutation sequence.
+
+Note: Given n will be between 1 and 9 inclusive.
+
+思路:
+     如果排列的第一个数字确定，剩余的 n-1 个数字的排列有 (n-1)! 种，第二个数字确定， 剩余的 n-2 个数字的排列有 (n-2)! 种，依次类推
+     如果要求第 k 个排列，我们可以通过上面的规律，确定排列的第1个数字是什么，比如 n = 3 ，k = 5，排列的第一个数字确定之后剩余的数字有 2 种排列，第一个数字 为 1 和 2 时生成的排列数为 2*2=4 种，所以第 5 个排列的第一个数字为 3 。而确定了排列的第一个数字之后，问题变成了 对 剩余的n-1 个数字求第 5-4=1 个排列。
+     类似的问题，使用循环或者递归即可解决。
+     
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def getPermutation(self, n, k):
+        """
+        :type n: int
+        :type l: int
+        :rtype: str
+        """
+        sum = 1
+        result = ""
+        for i in range(1, n):
+            sum *= i
+        set = []
+        for i in range(n):
+            set.append(i + 1)
+        k -= 1
+        for i in range(n):
+            order = k / sum
+            k %= sum
+            result += chr(set[order] + ord('0'))
+            del set[order]
+            if i != n - 1:
+                sum /= (n - i - 1)
+        return result
+
+solution = Solution()
+n = 4
+sum = 1
+for i in range(1,n + 1):
+    sum *= i
+for k in range(1,sum + 1):
+    print solution.getPermutation(n, k)
+
+
+
+
+**61.Rotate List
+  Given a list, rotate the list to the right by k places, where k is non-negative.
+
+For example:
+Given 1->2->3->4->5->NULL and k = 2,
+return 4->5->1->2->3->NULL.
+
+
+思路：
+     k 大于或者等于链表的长度，要取模（k = k % len）
+     记录两个链表的位置，一个指向左边链表的最右端（pre），另一个指向右边链表的最右端（p）。通过这两个指针，就可以实现链表的旋转。
+	p.next = head
+        head = pre.next
+        pre.next = None
+
+AC的Python源代码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class ListNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.next = None
+
+class Solution(object):
+    def rotateRight(self, head, k):
+        """
+        :type head: ListNode
+        :type k: int
+        :rtype: ListNode
+        """
+#两个指针，一个指向左边链表的最右端，另一个指向右边链表的最右端
+        p = head
+        len = 0
+        while p != None:
+            len += 1
+            p = p.next
+        if len == 0:
+            return head
+        k = k % len
+        if k == 0:
+            return head
+        pre = head
+        p = head
+        dis = 0
+        while dis < k:
+            p = p.next
+            dis += 1
+            if p == None:
+                return head
+        while p.next != None:
+            p = p.next
+            pre = pre.next
+        p.next = head
+        head = pre.next
+        pre.next = None
+        return head
+
+
+solution = Solution()
+k = 3
+n = 3
+head = ListNode(1)
+p = head
+for i in range(2,n):
+    p.next = ListNode(i)
+    p = p.next
+
+head = solution.rotateRight(head, k)
+while head != None:
+    print head.val,
+    head = head.next
+
+
+
+
+
+**63.Unique Paths II
+  Follow up for "Unique Paths":
+
+Now consider if some obstacles are added to the grids. How many unique paths would there be?
+
+An obstacle and empty space is marked as 1 and 0 respectively in the grid.
+
+For example,
+
+There is one obstacle in the middle of a 3x3 grid as illustrated below.
+
+[
+  [0,0,0],
+  [0,1,0],
+  [0,0,0]
+]
+
+The total number of unique paths is 2.
+
+Note: m and n will be at most 100.
+
+
+思路：
+     直接求组合的方法即使可以求，也会出现阶乘溢出的情况。所以利用动态规划的思想来解题,空间复杂度为O（min(m,n)） 。 
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def uniquePathsWithObstacles(self, obstacleGird):
+        """
+        :type obstacleGird: List[List[int]]
+        :rtype: int
+        """
+        if len(obstacleGird) == 0:
+            return 0
+        for i in range(len(obstacleGird)):
+            for j in range(len(obstacleGird[0])):
+                if obstacleGird[i][j] == 1:
+                    obstacleGird[0][j] = 0
+                elif j == 0:
+                    if i == 0:
+                        obstacleGird[i][j] = 1
+                else:
+                    obstacleGird[0][j] += obstacleGird[0][j - 1]
+        return obstacleGird[0][j]
+
+solution = Solution()
+obstacleGird = [[1,0]]
+print solution.uniquePathsWithObstacles(obstacleGird)
+
+
+
+
+
+**64.Minimum Path Sum
+  Given a m x n grid filled with non-negative numbers, find a path from top left to bottom right which minimizes the sum of all numbers along its path.
+
+Note: You can only move either down or right at any point in time.
+
+
+思路：
+     动态规划的思想，空间复杂度为O（min(m,n)）。grid[0][j] 记录到当前的 grid[i][j]最小的路径和， m * n 的二位网格遍历之后， grid[0][len - 1] 就是最后的结果。
+     状态转移方程：
+	i == 0 and j > 0 时, grid[0][j] += grid[0][j - 1] 	
+	i > 0 and j == 0 时, grid[0][j] += grid[i][j]
+	i > 0 and j > 0 时 
+		如果 grid[0][j - 1] > grid[0][j] 时, grid[0][j] += grid[i][j] 
+		否则, grid[0][j] = grid[0][j - 1] + grid[i][j]
+
+AC的Python源码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def minPathSum(self, grid):
+        """
+        :type grid: List[List[int]]
+        :rtype: int
+        """
+        if len(grid) == 0:
+            return 0
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if j == 0:
+                    if i != 0:
+                        grid[0][j] += grid[i][j]
+                elif i == 0:
+                    grid[0][j] += grid[0][j - 1]
+                else:
+                    if grid[0][j - 1] > grid[0][j]:
+                        grid[0][j] += grid[i][j]
+                    else:
+                        grid[0][j] = grid[i][j] + grid[0][j - 1]
+        return grid[0][j]
+
+solution = Solution()
+grid = [
+    [1,2,3],
+    [4,5,6],
+    [7,8,9]
+]
+print solution.minPathSum(grid)
+
+
+
+**69.Sqrt(x)
+  Implement int sqrt(int x).
+
+Compute and return the square root of x.
+
+思路：
+     二分搜索结果，left = 0, right = x ;
+     二分区间得， mid = (left + mid) / 2， 三种情况
+	1. mid * mid <= x and (mid + 1)*(mid + 1) > x, mid 就是最接近 sqrt(x) 的整数
+	2. mid * mid < x and (mid + 1)*(mid + 1) <= x, 说明 sqrt(x) 的结果在 区间 [mid + 1, right] 内, 所以 left = mid + 1
+		注意：这里不能让 left = mid ， 如果这样做的话，有可能会陷入死循环，例如：left == mid，right = mid + 1 并且 mid * mid < x and (mid + 1)*(mid + 1) = x 这种情况。
+	3. mid * mid > x . 说明 sqrt(x) 的结果在 区间 [left, mid - 1] 内， 所以 right = mid
+
+
+AC的Python源代码如下：
+
+class Solution(object):
+    def mySqrt(self, x):
+        """
+        :type x: int
+        :rtype: int
+        """
+        """
+        二分法求平方，所求的结果是求平方后最接近x的整数
+        """
+        left = 0
+        right = x
+        while True:
+            mid = (left + right) / 2 
+            """
+            结果满足以下这个逻辑表达式，说明mid是最接近sqrt(x) 的整数
+            """
+            if mid * mid <= x and (mid + 1) * (mid + 1) > x:
+                break
+            elif mid * mid > x:
+                right = mid
+            else:
+                """
+                这种情况下，有(mid+1)*(mid+1) <= x
+                left = mid + 1 ,一方面加快逼近速度，另一方面避免进入死循环
+                """
+                left = mid + 1
+        return mid
+        
+
+
+
+**70.Climbing Stairs
+  You are climbing a stair case. It takes n steps to reach to the top.
+
+Each time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top? 
+
+思路：
+     n == 0 时， ways = 1
+     n == 1 时， ways = 1
+     可以用动态规划(Dynamic Programming)来解决这个问题， dp[i] 表示到达第 i 个台阶有多少种方式，而到达第 i 个台阶 有两种方案 从第 i - 1层台阶跨一步到达第 i 层台阶 或者 从第 i - 2 层台阶跨两步到达第 i 层台阶，即 dp[i] = dp[i - 1] + dp[i - 2] 
+     n == 2 时 ， ways = 1 + 1 = 2
+     n == 3 时 ， ways = 1 + 2 = 3
+     可以看出规律，符合斐波那契数列，问题解决
+
+
+AC的Python源码如下：
+
+class Solution(object):
+    def climbStairs(self, n):
+        """
+        :type n: int
+        :rtype: int
+        """
+        """
+        斐波那契数列
+        """
+        pre_one = 1
+        pre_two = 0
+        for i in range(1, n):
+            tmp = pre_one
+            pre_one += pre_two
+            pre_two = tmp
+        return pre_one + pre_two
+            
+        
+
+
+**73.Set Matrix Zeroes
+  Given a m x n matrix, if an element is 0, set its entire row and column to 0. Do it in place.
+
+click to show follow up.
+Follow up:
+
+Did you use extra space?
+A straight forward solution using O(mn) space is probably a bad idea.
+A simple improvement uses O(m + n) space, but still not the best solution.
+Could you devise a constant space solution?
+
+思路：
+
+     如果允许额外存储行和列清零的信息，那么题目就没有意思了。希望只用O(1)的存储空间的时候，我们就得利用矩阵本身的存储空间了：把清零的信息保存在第一行和第一列里。
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def setZeroes(self, matrix):
+        """
+        :type matrix: List[List[int]]
+        :rtype: void Do not return anythong, modify matrix in-place instead.
+        """
+        m = len(matrix)
+        if m == 0:
+            return
+        n = len(matrix[0])
+        if n == 0:
+            return
+#two variables, row_flag and col_flag, are used to determine whether the first row and col should be assigned to zero. 
+        row_flag = False
+        col_flag = False
+        for i in range(m):
+            for j in range(n):
+                if matrix[i][j] == 0:
+                    if i == 0:
+                        row_flag = True
+                    if j == 0:
+                        col_flag = True
+                    matrix[i][0] = 0
+                    matrix[0][j] = 0
+        for i in range(1, m):
+            if matrix[i][0] == 0:
+                for j in range(1, n):
+                    matrix[i][j] = 0
+        for i in range(1,n):
+            if matrix[0][i] == 0:
+                for j in range(1, m):
+                    matrix[j][i] = 0
+        if row_flag:
+            for i in range(n):
+                matrix[0][i] = 0
+        if col_flag:
+            for i in range(m):
+                matrix[i][0] = 0
+
+solution = Solution()
+matrix = [
+    [1,1,0,1],
+    [1,2,2,1],
+    [-1,0,1,1],
+    [1,1,1,1]
+]
+solution.setZeroes(matrix)
+for i in matrix:
+    print i
+
+
+
+**72.Edit Distance
+  Given two words word1 and word2, find the minimum number of steps required to convert word1 to word2. (each operation is counted as 1 step.)
+
+You have the following 3 operations permitted on a word:
+
+a) Insert a character
+b) Delete a character
+c) Replace a character
+
+例如将A(kitten)转成B(sitting)：
+sitten （k→s）替换
+sittin （e→i）替换
+sitting （→g）插入
+
+
+思路：
+如果我们用 i 表示当前字符串 A 的下标（下标从1开始），j 表示当前字符串 B 的下标（下标从1开始）。 如果我们用d[i, j] 来表示A[1, ... , i] B[1, ... , j] 之间的最少编辑操作数。那么我们会有以下发现：
+
+1. d[0, j] = j;
+
+2. d[i, 0] = i;
+
+3. d[i, j] = d[i-1, j - 1] if A[i] == B[j]
+
+4. d[i, j] = min(d[i-1, j - 1], d[i, j - 1], d[i-1, j]) + 1  if A[i] != B[j]
+
+所以，要找出最小编辑操作数，只需要从底自上判断就可以了。
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def minDistance(self, word1, word2):
+        """
+        :type word1: str
+        :type word2: str
+        :rtype: int
+        """
+        len1 = len(word1)
+        len2 = len(word2)
+        dp = []
+        for i in range(len1 + 1):
+            tmp = []
+            for j in range(len2 + 1):
+                tmp.append(0)
+            dp.append(tmp)
+        for i in range(len1 + 1):
+            dp[i][0] = i
+        for j in range(len2 + 1):
+            dp[0][j] = j
+        for i in range(1,len1 + 1):
+            for j in range(1,len2 + 1):
+                if word1[i - 1] == word2[j - 1]:
+                    dp[i][j] = dp[i - 1][j - 1]
+                else:
+                    dp[i][j] = 1 + min(dp[i - 1][j - 1], dp[i][j - 1], dp[i - 1][j])
+        return dp[i][j]
+
+
+word1 = ""
+word2 = ""
+solution = Solution()
+print solution.minDistance(word1,word2)
+
+编写Python程序时的细节：
+生成二位数组（嵌套列表）
+	for i in range(len1 + 1):
+            tmp = []
+            for j in range(len2 + 1):
+                tmp.append(0)
+            dp.append(tmp)
+生成后的二位数组如下（7*8）
+[[0, 0, 0, 0, 0, 0, 0, 0], 
+[0, 0, 0, 0, 0, 0, 0, 0], 
+[0, 0, 0, 0, 0, 0, 0, 0], 
+[0, 0, 0, 0, 0, 0, 0, 0], 
+[0, 0, 0, 0, 0, 0, 0, 0], 
+[0, 0, 0, 0, 0, 0, 0, 0], 
+[0, 0, 0, 0, 0, 0, 0, 0]]
+
+
+
+
+
+75.Sort Colors
+  Given an array with n objects colored red, white or blue, sort them so that objects of the same color are adjacent, with the colors in the order red, white and blue.
+
+Here, we will use the integers 0, 1, and 2 to represent the color red, white, and blue respectively.
+
+Note:
+You are not suppose to use the library's sort function for this problem.
+
+click to show follow up.
+
+Follow up:
+A rather straight forward solution is a two-pass algorithm using counting sort.
+First, iterate the array counting number of 0's, 1's, and 2's, then overwrite array with total number of 0's, then 1's and followed by 2's.
+
+Could you come up with an one-pass algorithm using only constant space?
+
+思路：
+     扫描一遍，单向遍历；使用两个指针 left 和 right 记录 0 和 2 插入的位置；遇到 1 时不做任何操作，遇到 0 时与 left 指向的元素交换， 遇到 2 时与 right 指向的元素交换。
+注意：交换过来的元素也要进行判断，以避免 0 和 2 被漏掉。
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def sortColors(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: void Do not return anything. modify nums in-place instead.
+        """
+        left = 0
+        right = len(nums) - 1
+        i = 0
+        while i < len(nums):
+            if nums[i] == 1:
+                i += 1
+                continue
+            elif nums[i] == 0:
+                if i >= left:
+                    nums[i], nums[left] = nums[left], nums[i]
+                    left += 1
+			#交换过来的元素也要进行判断，所以这里不做 遍历指针后移一位 的操作
+                    continue
+                i += 1
+            else:
+                if i <= right:
+                    nums[i], nums[right] = nums[right], nums[i]
+			#交换过来的元素也要进行判断，所以这里不做 遍历指针后移一位 的操作
+                    right -= 1
+                    continue
+                i += 1
+
+solution = Solution()
+nums = [1,2,0]
+solution.sortColors(nums)
+print nums
+
+
+
+*80.Remove Duplicates From Sorted Array II
+  Follow up for "Remove Duplicates":
+What if duplicates are allowed at most twice?
+
+For example,
+Given sorted array nums = [1,1,1,2,2,3],
+
+Your function should return length = 5, with the first five elements of nums being 1, 1, 2, 2 and 3. It doesn't matter what you leave beyond the new length. 
+
+思路：
+      只需要维护一个counter　和 cur 指针，当 counter　大于或者等于　2　时，就直接跳过即可，
+	否则说明元素出现次数没有超，将该元素插入到 cur 所指向的位置，若遇到新元素则重置 counter 。
+      总体算法只需要扫描一次数组，所以时间上是O(n)，空间上只需要维护一个 cur 和 counter，所以是O(1)。
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def removeDuplicates(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: int 
+        """
+        if len(nums) < 2:
+            return len(nums)
+        count = 0
+        cur = 1
+        for i in range(1, len(nums)):
+            if nums[i] == nums[i - 1]:
+                count +=1
+                if count >= 2:
+                    continue
+            else:
+                count = 0
+            nums[cur] = nums[i]
+            cur += 1
+        return cur
+
+solution = Solution()
+nums = [1,1,1,2,2,3]
+print solution.removeDuplicates(nums)
+print nums
+
+
+
+
+
+**81.Search in Rotated Sorted Array II
+  Follow up for "33.Search in Rotated Sorted Array":
+What if duplicates are allowed?
+
+Would this affect the run-time complexity? How and why?
+
+Write a function to determine if a given target is in the array.
+
+思路：
+     和 33.Search in Rotated Sorted Array 唯一的区别是这道题目中元素会有重复的情况出现。不过正是因为这个条件的出现，出现了比较复杂的case，甚至影响到了算法的时间复杂度。原来我们是依靠中间和边缘元素的大小关系，来判断哪一半是不受rotate影响，仍然有序的。而现在因为重复的出现，如果我们遇到中间和边缘相等的情况，我们就丢失了哪边有序的信息，因为哪边都有可能是有序的结果。
+     假设原数组是{1,2,3,3,3,3,3}，那么旋转之后有可能是{3,3,3,3,3,1,2}，或者{3,1,2,3,3,3,3}，这样的我们判断左边缘和中心的时候都是3，如果我们要寻找1或者2，我们并不知道应该跳向哪一半。解决的办法只能是对边缘移动一步，直到边缘和中间不在相等或者相遇，这就导致了会有不能切去一半的可能。
+     所以最坏情况（比如全部都是一个元素，或者只有一个元素不同于其他元素，而他就在最后一个）就会出现每次移动一步，总共是n步，算法的时间复杂度变成O(n)。
+
+代码如下：
+
+class Solution(object):
+    def search(self, nums, target):
+        """
+        :type nums: List[int]
+        :type target: int
+        :rtype: bool
+        """
+        left = 0
+        right = len(nums) - 1
+        while left <= right:
+            mid = (left + right) / 2
+            if target == nums[mid]:
+                return True
+            if nums[mid] > nums[left]:
+                if target < nums[mid] and nums[left] <= target:
+                    right = mid - 1
+                else:
+                    left = mid + 1
+            elif nums[mid] < nums[left]:
+                if target > nums[mid] and nums[right] >= target:
+                    left = mid + 1
+                else:
+                    right = mid - 1
+            else:
+                left += 1
+        return False
+
+
+
+
+
+**83.Remove Duplicates From Sorted List II
+  Given a sorted linked list, delete all nodes that have duplicate numbers, leaving only distinct numbers from the original list.
+
+For example,
+Given 1->2->3->3->4->4->5, return 1->2->5.
+Given 1->1->1->2->3, return 2->3. 
+
+思路：
+     在头结点 head 前加一个新节点 tmp，这样做可以处理头结点是重复元素的情况。
+
+AC的Python源码如下：
+
+class Solution(object):
+    def deleteDuplicates(self, head):
+        """
+        :type head: ListNode
+        :rtype: ListNode
+        """
+        if head == None:
+            return head
+        tmp = ListNode(0)
+        tmp.next = head
+        p = head
+        pre = tmp
+        cur = head.val
+        flag = False
+        while p != None:
+            while p.next != None and p.next.val == cur:
+                flag = True
+                p = p.next
+            if flag:
+                pre.next = p.next
+                flag = False
+            else:
+                pre = p
+            p = p.next
+            if p != None:
+                cur = p.val
+        return tmp.next
+
+
+
+
+**84.Largest Rectangle In Histogram.py
+  Given n non-negative integers representing the histogram's bar height where the width of each bar is 1, find the area of largest rectangle in the histogram. 
+For example,
+Given heights = [2,1,5,6,2,3],
+return 10. 
+
+思路：
+height的内容是 [5,6,7,8,3]，特点是除了最后一个，前面全部保持递增，且最后一个立柱的高度小于前面所有立柱高度。
+
+对于这种特点的柱状图，如果使用上面所说的“挨个使用每一个柱状图的高度作为矩形的高度，求面积”的方法，还需要用嵌套循环吗？
+
+我们知道除了最后一个，从第一个到倒数第二个立柱的高度都在升高，那么如果挨个使用每一个柱的高度作为矩形的高度，那么依次能得到的矩形的宽度就可以直接算出来：使用5作为高度可以使用前四个立柱组成 4*5的矩形，高度6可以组成3*6的矩形... 因此只需要遍历一次，选出最大面积即可。
+
+对于这种类型的柱状图，最大矩形面积的时间复杂度是O(n)。
+
+我们将这种特点的柱状图称为“波峰图”。
+
+(1) 在height尾部添加一个0，也就是一个高度为0的立柱。作用是在最后也能凑成上面提的那种“波峰图”。
+
+(2) 定义了一个stack，然后遍历时如果height[i] 大于stack.top()，进栈。反之，出栈直到栈顶元素小于height[i]。
+
+由于出栈的这些元素高度都是递增的，我们可以求出这些立柱中所围成的最大矩形。更妙的是，由于这些被弹出的立柱处于“波峰”之上(比如弹出i 到 i+k，那么所有这些立柱的高度都高于 i-1和 i+k+1的高度)，因此，如果我们使用之前所提的“左右延伸找立柱”的思路解，以这些立柱的高度作为整个矩形的高度时，左右延伸出的矩形所包含的立柱不会超出这段“波峰”，因为波峰外的立柱高度都比他们低。“波峰图”其实就是求解最大矩形的“孤岛”，它不会干扰到外部。
+
+(3) 由于比height[i]大的元素都出完了，height[i]又比栈顶元素大了，因此再次进栈。如此往复，直到遍历到最后那个高度为0的柱，触发最后的弹出以及最后一次面积的计算，此后stack为空。
+
+(4) 返回面积最大值。
+
+栈中存的不是高度，而是height的索引，这样做的好处是不会影响宽度的计算，索引值相减 = 宽度。
+自己实现代码如下，虽然是二重循环，但时间复杂度实际  2N，故为O(N)
+
+
+
+注意：
+     实现的时候要注意一些边界条件：
+	当前高度小于栈顶索引所指向的高度时，要弹栈，
+		如果弹栈之后 栈为空，说明弹出的索引 tmp 指向的直方体向左一直延伸到起始位置，即它是左边的最矮直方体，这个时候向左延伸的面积（包括它本身）是 (tmp + 1) * heights[tmp]，向右延伸的面积是 (i - tmp - 1) * heights[tmp]
+		如果弹栈之后栈不为空，说明弹出的索引 tmp 指向的直方体向左延伸到 当前栈顶索引所指向的直方体，因为弹出的 tmp 所指向的直方体 高于 当前栈顶索引所指向的直方体，所以这个时候向左延伸的面积（包括它本身）是 (tmp - stack[-1]) * heights[tmp]，向右延伸的面积是 (i - tmp - 1) * heights[tmp]
+
+AC的源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def largestRectangleArea(self, heights):
+        """
+        :type heights: List[int]
+        :rtype: int
+        """
+        if len(heights) == 0:
+            return 0
+        heights.append(0)
+        stack = []
+        min = 0
+        for i in range(len(heights)):
+            while len(stack) > 0 and heights[i] < heights[stack[-1]]:
+                tmp = stack.pop()
+                area = 0
+                if len(stack) == 0:
+                    area += (tmp + 1) * heights[tmp]
+                else:
+                    area += (tmp - stack[-1]) * heights[tmp]
+                area += (i - tmp - 1) * heights[tmp]
+                if area > min:
+                    min = area
+            stack.append(i)  
+        return min
+
+solution = Solution()
+heights = [4,2,0,3,2,5]
+print solution.largestRectangleArea(heights)
+                
+            
+
+     
+
+**85.Maximal Rectangle
+  Given a 2D binary matrix filled with 0's and 1's, find the largest rectangle containing only 1's and return its area.
+
+For example, given the following matrix:
+
+1 0 1 0 0
+1 0 1 1 1
+1 1 1 1 1
+1 0 0 1 0
+
+Return 6. 
+
+分析：
+     找出元素全为 ‘1’ 的 最大子矩阵。这个所要求的最大子矩阵一定以某一行为底。
+     有了上一题的基础，这道题就可等效为上一题，对于矩阵每一行，我们将其看作直方图，立柱的高度就是行中元素往上数包含的连续1的个数。
+
+     因此每一行都可以利用上一题方法计算最大矩形，最后求出各行结果的最大值就好了。时间复杂度 O(n2)
+
+   
+AC的源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def largestRectangleArea(self, heights):
+        """
+        :type heights: List[int]
+        :rtype: int
+        """
+        if len(heights) == 0:
+            return 0
+        heights.append(0)
+        stack = []
+        min = 0
+        for i in range(len(heights)):
+            while len(stack) > 0 and heights[i] < heights[stack[-1]]:
+                tmp = stack.pop()
+                area = 0
+                if len(stack) == 0:
+                    area += (tmp + 1) * heights[tmp]
+                else:
+                    area += (tmp - stack[-1]) * heights[tmp]
+                area += (i - tmp - 1) * heights[tmp]
+                if area > min:
+                    min = area
+            stack.append(i)  
+        return min
+
+    def maximalRectangle(self, matrix):
+        """
+        :type matrix: List[List[str]]
+        :rtype: int
+        """
+        if len(matrix) == 0:
+            return 0
+        max = 0
+        heights = []
+        for i in range(len(matrix[0])):
+            heights.append(0)
+        for i in range(len(matrix)):
+            for j in range(len(matrix[0])):
+                if matrix[i][j] == '0':
+                    heights[j] = 0
+                else:
+                    heights[j] += 1
+            tmp = self.largestRectangleArea([k for k in heights])
+            if max < tmp:
+                max = tmp
+        return max
+
+solution = Solution()
+matrix = [
+    "10100",
+    "10111",
+    "11111",
+    "10010",
+]
+print solution.maximalRectangle(matrix)
+
+        
+
+
+
+**86.Partition List
+  Given a linked list and a value x, partition it such that all nodes less than x come before nodes greater than or equal to x.
+
+You should preserve the original relative order of the nodes in each of the two partitions.
+
+For example,
+Given 1->4->3->2->5->2 and x = 3,
+return 1->2->2->4->3->5. 
+
+思路：
+     遍历链表，把 值大于或等于 x 的节点，链接到 greater 链表的尾部（同时也把该节点从原链表中删掉了），算法结束后，把 greater 链表 链接到原链表的尾部即可，这样做保持了每个链表中 原始节点的相对位置。
+注意：对有 头结点 的单链表进行 插入或者删除 操作会比 没有 头结点 的单链表更方便，所以可以人为的添加头结点，在算法结束之前删掉头结点就好。
+
+AC的源代码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class ListNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.next = None
+
+class Solution(object):
+    def partition(self, head, x):
+        """
+        :type head: ListNode
+        :type x: int
+        :rtype: ListNode
+        """
+        if head == None:
+            return head
+        greater = ListNode(0)
+        tmp = ListNode(0)
+        tmp.next = head
+        p = head
+        pre = tmp
+        q = greater
+        while p != None:
+            if p.val >= x:
+                q.next = p
+                pre.next = p.next
+                p = p.next
+                q = q.next 
+                q.next = None
+            else:
+                p = p.next
+                pre = pre.next
+        p = tmp
+        while p.next != None:
+            p = p.next
+        p.next = greater.next
+        return tmp.next
+        
+
+
+
+**88.Merge Sorted Array
+  Given two sorted integer arrays nums1 and nums2, merge nums2 into nums1 as one sorted array.
+
+Note:
+You may assume that nums1 has enough space (size that is greater or equal to m + n) to hold additional elements from nums2. The number of elements initialized in nums1 and nums2 are m and n respectively.
+
+思路：
+     考虑到num1数组很大，可以直接在num1数组上进行合并，但是要讲究效率。
+如果单纯从前往后合并，那么效率会非常低，因为a数组后面的数字需要不停的移动。
+
+换一种思路，我们采用从后往前合并，首先计算出总长度，设置一个指针从num1数组最后往前移动。
+
+Java代码：
+
+class Solution {
+public:
+    void merge(int A[], int m, int B[], int n) {
+        // Start typing your C/C++ solution below
+        // DO NOT write int main() function
+        int index = m + n - 1;
+        int aIndex = m - 1;
+        int bIndex = n - 1;
+        while(0 <= aIndex && 0 <= bIndex)
+        {
+            if (B[bIndex] > A[aIndex])
+            {
+                A[index--] = B[bIndex--];
+            }
+            else
+            {
+                A[index--] = A[aIndex--];
+            }
+        }
+        
+        while(0 <= aIndex)
+        {
+            A[index--] = A[aIndex--];
+        }
+        
+        while(0 <= bIndex)
+        {
+            A[index--] = B[bIndex--];
+        }
+    }
+};
+
+
+
+
+
+89.Gray Code
+  The gray code is a binary numeral system where two successive values differ in only one bit.
+
+Given a non-negative integer n representing the total number of bits in the code, print the sequence of gray code. A gray code sequence must begin with 0.
+
+For example, given n = 2, return [0,1,3,2]. Its gray code sequence is:
+
+00 - 0
+01 - 1
+11 - 3
+10 - 2
+
+Note:
+For a given n, a gray code sequence is not uniquely defined.
+
+For example, [0,2,3,1] is also a valid gray code sequence according to the above definition.
+
+For now, the judge is able to judge based on one instance of gray code sequence. Sorry about that.
+
+思路：
+     生成格雷码：格雷码的异或转换，一头雾水，不知道到底是为什么
+     但是可以不用异或转换来生成格雷码，利用格雷码的 镜像 性质（有点取巧了，真的是不懂异或转换），转换方法如下：
+	n 比特的格雷码，可以递归地从 n - 1 比特的格雷码生成。
+	n位元的格雷码可以从n-1位元的格雷码以上下镜射后加上新位元的方式快速的得到，如右图所示一般。
+
+AC的Python源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def grayCode(self, n):
+        """
+        :type n: int
+        :rtype: List[int]
+        """
+        result = [0]
+        if n <= 0:
+            return result
+        sum = 1
+        for i in range(n):
+            tmp = []
+            for i in result[::-1]:
+                tmp.append(i + sum)
+            result.extend([j for j in tmp])
+            sum *= 2
+        return result
+solution = Solution()
+n = 3
+print solution.grayCode(n)
+        
+
+
+
+
+91.Decode Ways
+  A message containing letters from A-Z is being encoded to numbers using the following mapping:
+
+'A' -> 1
+'B' -> 2
+...
+'Z' -> 26
+
+Given an encoded message containing digits, determine the total number of ways to decode it.
+
+For example,
+Given encoded message "12", it could be decoded as "AB" (1 2) or "L" (12).
+
+The number of ways decoding "12" is 2. 
+
+思路：
+     为了简化时间复杂度，我们采用动态规划的方法。例如，当我们知道了n-2长度的字符串能够解释的数目以及n-1长度的字符串能够解释的数目时，我们可以判读如下两个条件：
+	1）若第n个字符是0，则这个0要和前一个数字进行组合才可以组成一种解码方式，若前一个数字 是 0 或者大于 2 ，返回 0 种解码方式
+	2）若第n个字符在1到9之间，则n长度的字符串能够解释的数目包含n-1长度字符串能够解释的数目。
+	3）若第n-1个字符与第n个字符可以解释为一个字母时，则n长度的字符串能够解释的数目包含n-2长度字符串能够解释的数目。
+
+AC的Python源码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def numDecodings(self, s):
+        """
+        :type s: str
+        :rtype: int
+        """ 
+        if len(s) == 0 or s[0] == '0':
+            return 0
+        pre_one = 1
+        pre_two = 1
+        for i in range(1,len(s)):
+            if s[i] == '0':
+                if 0 < ord(s[i - 1]) - ord('0') <= 2:
+                    pre_one = pre_two
+                else:
+                    return 0
+            elif 10 <= (ord(s[i]) - ord('0') + (ord(s[i - 1]) - ord('0'))* 10)<= 26:
+                tmp = pre_one
+                pre_one += pre_two
+                pre_two = tmp
+            else:
+                pre_two = pre_one
+        return pre_one
+
+solution = Solution()
+s = "227"
+print solution.numDecodings(s)
+            
+        
+
+
+
+
+**92.Reverse Linked List II
+  Reverse a linked list from position m to n. Do it in-place and in one-pass.
+
+For example:
+Given 1->2->3->4->5->NULL, m = 2 and n = 4,
+
+return 1->4->3->2->5->NULL.
+
+Note:
+Given m, n satisfy the following condition:
+1 ≤ m ≤ n ≤ length of list. 
+
+思路：
+     first 指针记录 第 m 个节点的前一个节点（如果 m==1 ，first 指针无用）
+     将第 m 个节点到第 n 个节点这一段链表的原地翻转， end 指针记录翻转后的最后一个节点
+	原地翻转的代码：pre 始终保持指向链表的头
+		tmp = p.next
+            	p.next = pre
+            	pre = p
+            	p = tmp
+     翻转之后， end.next = 第n个节点之后的链表，
+	若 m == 1，直接返回链表头结点，
+	否则 first.next = 翻转后链表的头结点，返回 head
+
+AC的Python源代码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class ListNode(object):
+    def __init__(self, x):
+        self.val = x
+        self.next = None
+
+class Solution(object):
+    def reverseBetween(self, head, m, n):
+        """
+        :type head: ListNode
+        :type m: int
+        :type n: int
+        :rtype: ListNode
+        """
+        if m == n:
+            return head
+        len = n - m
+        first = head
+        p = head
+        for i in range(m - 1):
+            first = p 
+            p = p.next
+        pre = p
+        p = p.next
+        end = pre
+        for i in range(len):
+            tmp = p.next
+            p.next = pre
+            pre = p
+            p = tmp
+        end.next = p
+        if m == 1:
+            return pre
+        else:
+            first.next = pre
+            return head
+
+
+
+
+
+**93.Restore IP Address
+  Given a string containing only digits, restore it by returning all possible valid IP address combinations.
+
+For example:
+Given "25525511135",
+
+return ["255.255.11.135", "255.255.111.35"]. (Order does not matter) 
+        
+思路：
+     从输入的字符串中，找出所有可能的 IP地址，本题中对 IP地址 的格式是有限制的：
+	1）IP地址必须是 4 段
+	2）每一段的数值大小（十进制整数）在区间 [0， 255]中
+	3）除了 0 之外，数值不可以 0 开头，即 00 、01 、001 、010 、011 都是非法的
+	4）字符串中的所有字符都是 IP地址 的组成部分，即每一个字符都要被 IP地址覆盖到 
+     由这些限制，问题 即可使用 回溯(DFS) 进行解决 def backtracking(self, result, s, i ,num , value):
+	result 是存放结果的集合，
+	s 是输入的字符串，
+	i 是字符串的下标：代表着从 下标i 到 结尾的字符串有效
+	num 表示 IP地址还有几段没处理
+	value 是合法的 IP地址的一部分
+     边界条件：
+	四段 IP 地址都找到 并且 所有的字符都被覆盖到，说明是合法的 IP地址，放入结果集 
+	没找够四段，字符已经用完，返回上一层
+     处理过程：
+	有效字符串的首字符是 0 ，即找到了一段 IP地址，继续 DFS
+	首字符不是 0，这一段 IP地址的长度可以是 1,2和3，分别 DFS寻找
+		这里注意：当 某一段IP地址的长度是 3 时，要判断数值是否 大于 255，如果大于 255 就舍弃这个选择
+
+把字符串转换成整数的函数 def convert(self ,s):
+
+
+AC的Python源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def convert(self ,s):
+        sum = 0
+        index = 0
+        while index < len(s) and s[index] == '0':
+            index += 1
+        for i in s[index:]:
+            sum *= 10
+            sum += ord(i) - ord('0')
+        return sum
+
+    def backtracking(self, result, s, i ,num , value):
+        if num == 0:
+            if i >= len(s):
+                result.append(value[1:])
+            return
+        elif i >= len(s):
+            return
+        elif s[i] != '0':
+            for j in range(i, min(i + 3,len(s))):
+                if self.convert(s[i:j + 1]) <= 255:
+                    self.backtracking(result, s, j + 1, num - 1, value + "."+ s[i:j + 1])
+        else:
+            self.backtracking(result, s, i + 1, num - 1, value + "." + s[i])
+
+
+
+    def restoreIpAddresses(self, s):
+        """
+        :type s: str
+        :rtype: List[str]
+        """
+        result = []
+        self.backtracking(result, s, 0, 4, "")
+        return result
+
+solution = Solution()
+s = "010010"
+for i in solution.restoreIpAddresses(s):
+    print i
+        
+        
+
+
+**97.Interleaving String
+  Given s1, s2, s3, find whether s3 is formed by the interleaving of s1 and s2.
+
+For example,
+Given:
+s1 = "aabcc",
+s2 = "dbbca",
+
+When s3 = "aadbbcbcac", return true.
+When s3 = "aadbbbaccc", return false. 
+
+思路：
+     判断字符串 s3 是否可以由字符串 s1 和 s2 交叉得到。
+     递归解决这道题，会出现计算大量重复子问题的情况，所以还是选择动态规划。
+     二维动态规划，dp[i][j] 表示 s[0:i + j - 1]（从 0 到 i+j-1 的子串） 是否可以由 s1[0:i-1] 和 s2[0:j-1] 交叉得到，若能 dp[i][j] = True,否则 False。
+	递推式： if(s1[i-1] == s3[i+j-1]) dp[i][j] = dp[i-1][j] || dp[i][j];  
+                 if(s2[j-1] == s3[i+j-1]) dp[i][j] = dp[i][j-1] || dp[i][j];  
+     dp[len(s1)][len(s2)] 的值就是 最终的结果。
+
+
+源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def isInterleave(self, s1, s2, s3):
+        """
+        :type s1: str
+        :type s2: str
+        :type s3: str
+        :rtype: bool
+        """
+        m = len(s1)
+        n = len(s2)
+        sum = len(s3)
+        if sum != m + n:
+            return False
+        dp = []
+        for i in range(m + 1):
+            tmp = []
+            for j in range(n + 1):
+                tmp.append(False)
+            dp.append([item for item in tmp])
+        dp[0][0] = True
+        for i in range(m + 1):
+            for j in range(n + 1):
+                index = i + j - 1
+                if index < 0:
+                    continue
+                else:
+                    if i > 0 and s1[i - 1] == s3[index] and dp[i - 1][j] == True:
+                        dp[i][j] = True
+                    elif j > 0 and s2[j - 1] == s3[index] and dp[i][j - 1] == True:
+                        dp[i][j] = True
+        return dp[m][n]
+
+solution = Solution()
+print solution.isInterleave(raw_input("s1 = "), raw_input("s2 = "), raw_input("s3 = "))      
+
+
+
+
+115. Distinct Subsequences
+  Given a string S and a string T, count the number of distinct subsequences of T in S.
+
+A subsequence of a string is a new string which is formed from the original string by deleting some (can be none) of the characters without disturbing the relative positions of the remaining characters. (ie, "ACE" is a subsequence of "ABCDE" while "AEC" is not).
+
+Here is an example:
+S = "rabbbit", T = "rabbit"
+
+Return 3. 
+
+思路：
+题意解读：只可以用删除字符的方法从第一个字符串 S 变换到第二个字符串 T，求出一共有多少种变换方法。
+	动态规划，定义dp[i][j]为字符串T[0:i] 由 字符串S[0:j]变换而来的变换方法数。
+	如果T[i]==S[j]，那么dp[i][j] = dp[i-1][j-1] + dp[i][j - 1]。意思是：如果当前T[i]==S[j]，那么 S 中当前这个字母既可以保留 也可以抛弃，所以变换方法等于 保留这个字母的变换方法 加上 不用这个字母的变换方法。
+	如果T[i]!=S[j]，那么dp[i][j] = dp[i][j - 1]，意思是如果 S 中当前字符不等，那么就只能抛弃当前这个字符。
+	递归公式中用到的dp[0][j] = 1（一个空串 由 任意一个字符串 变换而来 只有一个方法：字符全删除）
+
+AC的源代码：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def numDistinct(self, s, t):
+        """
+        :type s: str
+        :type t: str
+        :rtype: int
+        """
+        n = len(s)
+        m = len(t)
+        if m == 0:
+            return 1
+        if n < m:
+            return 0
+        dp = []
+        for i in range(m + 1):
+            tmp = []
+            for j in range(n + 1):
+                tmp.append(0)
+            dp.append(tmp)
+        for i in range(n + 1):
+            dp[0][i] = 1
+        for i in range(1, m + 1):
+            for j in range(i, n + 1):
+                if s[j - 1] == t[i - 1]:
+                    dp[i][j] += dp[i - 1][j - 1]
+                    dp[i][j] += dp[i][j - 1]
+                else:
+                    dp[i][j] = dp[i][j - 1]
+        return dp[m][n]
+
+solution = Solution()
+print solution.numDistinct(raw_input("s = "), raw_input("t = "))
+        
+
+
+120. Triangle
+  Given a triangle, find the minimum path sum from top to bottom. Each step you may move to adjacent numbers on the row below.
+
+For example, given the following triangle
+
+[
+     [2],
+    [3,4],
+   [6,5,7],
+  [4,1,8,3]
+]
+
+The minimum path sum from top to bottom is 11 (i.e., 2 + 3 + 5 + 1 = 11).
+
+Note:
+Bonus point if you are able to do this using only O(n) extra space, where n is the total number of rows in the triangle. 
+
+思路：在原数组上修改元素
+这个题属于动态规划问题，解题思路如下：
+法一：从上到下， 下一行的结果根据上一行的路径累计和而计算。
+triangle[i][j] += min(triangle[i -1 [j -1 ],triangle[i -1 ][j ] ) ，这样需要处理j=0和j=最大值。
+法二：从下往上，每一行的结果根据下面一行的路基累计和而计算。（参考大神才晓得）
+triangle[i][j] += min(triangle[i + 1][j], triangle[i + 1][j + 1]) 
+
+AC的代码如下：
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+#bottom to top
+    def minimumTotal(self, triangle):
+        length = len(triangle[-1])
+        for i in range(len(triangle) - 2, -1, -1):
+            length -= 1
+            for j in range(length):
+                if triangle[i + 1][j] < triangle[i + 1][j + 1]:
+                    triangle[i][j] += triangle[i + 1][j]
+                else:
+                    triangle[i][j] += triangle[i + 1][j + 1]
+        return triangle[0][0]
+
+#top to bottom
+    def minimumTotal_top_to_bottom(self, triangle):
+        """
+        :type triangle: List[List[int]]
+        :rtype: int
+        """
+        for i in range(1, len(triangle)):
+            triangle[i][0] += triangle[i - 1][0]
+            for j in range(1, len(triangle[i]) - 1):
+                triangle[i][j] += min(triangle[i - 1][j - 1], triangle[i - 1][j])
+            triangle[i][-1] += triangle[i - 1][-1]
+        min_sum = triangle[-1][0]
+        for i in triangle[-1]:
+            if min_sum > i:
+                min_sum = i
+        return min_sum
+
+solution = Solution()
+triangle = [
+    [2],
+    [3,4],
+    [6,5,7],
+    [4,1,8,3]
+]
+print solution.minimumTotal(triangle)
+        
+
+
+**287.Find the Duplicate Number
+  Given an array nums containing n + 1 integers where each integer is between 1 and n (inclusive), prove that at least one duplicate number must exist. Assume that there is only one duplicate number, find the duplicate one.
+
+Note:
+
+    You must not modify the array (assume the array is read only).
+    You must use only constant, O(1) extra space.
+    Your runtime complexity should be less than O(n2).
+    There is only one duplicate number in the array, but it could be repeated more than once.
+
+
+思路：
+我们不一定要依次选择数，然后看是否有这个数的重复数。
+利用抽屉原理：比如6个抽屉，如果有7个袜子要放到抽屉里，那肯定有一个抽屉至少两个袜子
+    数字范围在 1 到 n 之间
+    我们可以用二分法先选取n/2，按照抽屉原理，整个数组中如果小于等于n/2的数的数量大于n/2，说明1到n/2这个区间是肯定有重复数字的。
+    这里抽屉就是1到n/2的每一个数，而袜子就是整个数组中小于等于n/2的那些数。这样我们就能知道下次选择的数的范围，如果1到n/2区间内肯定有重复数字，则下次在1到n/2范围内找，否则在n/2 + 1到n范围内找。下次找的时候，还是找一半。
+
+注意:
+    mid = (min + max) / 2 ,代表的是 mid 这个数 ； 而 cnt 代表 数组中小于或者等于 mid 的元素个数
+    cnt > mid , 指的是数组中值在 1 到 mid 之间的元素个数 大于 mid ，说明 这个区间内有重复元素 ； 否则 mid + 1 至 n 之间 有重复元素
+
+
+
+AC的Python源码如下：
+
+#!usr/bin/env python
+#-*-coding:utf-8-*-
+import sys
+
+class Solution(object):
+    def findDuplicate(self, nums):
+        """
+        :type nums: List[int]
+        :rtype: int
+        """
+        min = 1
+        max = len(nums) - 1
+        while min < max:
+            cnt = 0
+            mid = (min + max) / 2
+            for i in range(len(nums)):
+                if mid >= nums[i]:
+                    cnt += 1
+            if cnt > mid:
+                max = mid
+            else:
+                min = mid + 1
+        return min
+
+solution = Solution()
+nums = [1,1]
+print solution.findDuplicate(nums)
+
